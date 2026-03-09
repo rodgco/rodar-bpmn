@@ -16,7 +16,7 @@ If you're familiar with OTP but new to BPMN, here are the core concepts:
 
 ## Current Status
 
-This library is at version `0.1.0-dev` targeting Elixir ~> 1.16 with OTP 27+. The following are fully implemented: start events, end events (plain, error, terminate), sequence flows with condition expressions, exclusive/parallel/inclusive gateways, script/user/service/manual/send/receive tasks, embedded subprocesses (with error boundary event propagation), token-based execution tracking, process registry, process lifecycle management, context supervision, and execution history. Complex gateways, event-based gateways, intermediate events, and boundary events are defined but awaiting the Phase 5 event bus.
+This library is at version `0.1.0-dev` targeting Elixir ~> 1.16 with OTP 27+. The following are fully implemented: start events, end events (plain, error, terminate), intermediate throw/catch events (message, signal, escalation, timer), boundary events (error, message, signal, timer, escalation), sequence flows with condition expressions, exclusive/parallel/inclusive/complex/event-based gateways, script/user/service/manual/send/receive tasks, embedded subprocesses (with error boundary event propagation), call activities (external process lookup via registry), token-based execution tracking, process registry, process lifecycle management, context supervision, execution history, and a Registry-based event bus for pub/sub messaging.
 
 ## Setup
 
@@ -34,7 +34,7 @@ Then fetch and compile:
 mix deps.get && mix compile
 ```
 
-The OTP application starts automatically — `Bpmn.Application` launches a supervisor tree that includes `Bpmn.ProcessRegistry` (for process definition lookup), `Bpmn.Registry` (process definition storage), `Bpmn.ContextSupervisor` and `Bpmn.ProcessSupervisor` (dynamic supervisors for process instances), and `Bpmn.Port.Supervisor` (for the Node.js port used by script tasks).
+The OTP application starts automatically — `Bpmn.Application` launches a supervisor tree that includes `Bpmn.ProcessRegistry` (for process definition lookup), `Bpmn.EventRegistry` (pub/sub for the event bus), `Bpmn.Registry` (process definition storage), `Bpmn.ContextSupervisor` and `Bpmn.ProcessSupervisor` (dynamic supervisors for process instances), and `Bpmn.Port.Supervisor` (for the Node.js port used by script tasks).
 
 ## Loading a BPMN Diagram
 
@@ -351,64 +351,70 @@ Bpmn.execute(start, ctx)
 
 ## Implemented Modules
 
-**Events:**
-- `Bpmn.Event.Start` — Routes token to outgoing flows
-- `Bpmn.Event.End` — Normal completion, error (sets error state), and terminate (stops parallel branches)
-
-**Tasks:**
-- `Bpmn.Activity.Task.Script` — Elixir and JavaScript execution (via Node.js port)
-- `Bpmn.Activity.Task.User` — Pauses execution, returns `{:manual, task_data}`, `resume/3` to continue
-- `Bpmn.Activity.Task.Service` — Invokes a handler module implementing `Bpmn.Activity.Task.Service.Handler`
-- `Bpmn.Activity.Task.Manual` — Pauses execution like User Task, type `:manual_task`
-- `Bpmn.Activity.Task.Send` — Fire-and-forget; stores message metadata, releases token immediately
-- `Bpmn.Activity.Task.Receive` — Pauses execution like User Task, type `:receive_task`
-
-**Gateways:**
-- `Bpmn.Gateway.Exclusive` — Evaluates conditions, routes to first match or default flow
-- `Bpmn.Gateway.Parallel` — Fork: tokens to all outgoing; Join: waits for all incoming
-- `Bpmn.Gateway.Inclusive` — Fork: tokens to all matching conditions; Join: waits for activated paths only
-
-**Other:**
-- `Bpmn.SequenceFlow` — Conditional expression evaluation
-- `Bpmn.Activity.Subprocess.Embedded` — Executes nested elements within parent context
-
-## Implemented Modules
-
 **Execution Infrastructure:**
 - `Bpmn.Token` — Token struct with ID generation, forking for parallel branches
 - `Bpmn.Registry` — Process definition registry (register, lookup, list, unregister)
 - `Bpmn.Process` — Process lifecycle GenServer (create, activate, suspend, resume, terminate)
-- `Bpmn.Context` — GenServer-based execution context with history tracking
+- `Bpmn.Context` — GenServer-based execution context with history tracking and event bus/timer `handle_info` callbacks
+- `Bpmn.Event.Bus` — Registry-based pub/sub for message (point-to-point), signal, and escalation (broadcast) events
+- `Bpmn.Event.Timer` — ISO 8601 duration parsing (`PT5S`, `PT1H30M`) and `Process.send_after` scheduling
 
 **Events:**
 - `Bpmn.Event.Start` — Routes token to outgoing flows
 - `Bpmn.Event.End` — Normal completion, error (sets error state), and terminate (stops parallel branches)
+- `Bpmn.Event.Intermediate.Throw` — Publishes message/signal/escalation to event bus, then releases token
+- `Bpmn.Event.Intermediate.Catch` — Subscribes to event bus (message/signal) or schedules timer; returns `{:manual, _}` with `resume/3`
+- `Bpmn.Event.Boundary` — Error (activated by parent), message/signal/escalation (subscribe to event bus), timer (scheduled callback)
 
 **Tasks:**
 - `Bpmn.Activity.Task.Script` — Elixir and JavaScript execution (via Node.js port)
 - `Bpmn.Activity.Task.User` — Pauses execution, returns `{:manual, task_data}`, `resume/3` to continue
 - `Bpmn.Activity.Task.Service` — Invokes a handler module implementing `Bpmn.Activity.Task.Service.Handler`
 - `Bpmn.Activity.Task.Manual` — Pauses execution like User Task, type `:manual_task`
-- `Bpmn.Activity.Task.Send` — Fire-and-forget; stores message metadata, releases token immediately
-- `Bpmn.Activity.Task.Receive` — Pauses execution like User Task, type `:receive_task`
+- `Bpmn.Activity.Task.Send` — Publishes to event bus if `messageRef` present; releases token immediately
+- `Bpmn.Activity.Task.Receive` — Subscribes to event bus if `messageRef` present for auto-resume; `resume/3` for manual
 
 **Gateways:**
 - `Bpmn.Gateway.Exclusive` — Evaluates conditions, routes to first match or default flow
 - `Bpmn.Gateway.Parallel` — Fork: tokens to all outgoing; Join: waits for all incoming
 - `Bpmn.Gateway.Inclusive` — Fork: tokens to all matching conditions; Join: waits for activated paths only
+- `Bpmn.Gateway.Complex` — Like inclusive but with configurable `activationCondition` for join
+- `Bpmn.Gateway.Exclusive.Event` — Returns `{:manual, _}` with downstream catch event info
 
 **Other:**
 - `Bpmn.SequenceFlow` — Conditional expression evaluation
+- `Bpmn.Activity.Subprocess` — Call activity; looks up external process from `Bpmn.Registry`, executes in child context, merges data back
 - `Bpmn.Activity.Subprocess.Embedded` — Executes nested elements within parent context; error boundary event propagation
 
-## Not Yet Implemented (Stubs)
+## Event Bus Usage
 
-The following modules are defined but return `{:not_implemented}`, awaiting the Phase 5 event bus or other prerequisites:
+The event bus enables automated communication between BPMN nodes:
 
-- `Bpmn.Event.Intermediate` — Intermediate throw/catch events
-- `Bpmn.Event.Boundary` — Boundary events (parser support added; error boundaries triggered by subprocess handler)
-- `Bpmn.Gateway.Exclusive.Event` — Event-based exclusive gateway
-- `Bpmn.Gateway.Complex` — Complex gateway
-- `Bpmn.Activity.Subprocess` — Call activity
+```elixir
+# Subscribe a catch event to wait for a message
+Bpmn.Event.Bus.subscribe(:message, "order_received", %{
+  context: context,
+  node_id: "catch1",
+  outgoing: ["flow_out"]
+})
+
+# Publish a message — delivers to first subscriber and unregisters it
+Bpmn.Event.Bus.publish(:message, "order_received", %{data: %{order_id: "123"}})
+
+# Publish a signal — broadcasts to ALL subscribers
+Bpmn.Event.Bus.publish(:signal, "system_alert", %{data: %{level: "warning"}})
+
+# Publish an escalation — broadcasts to ALL subscribers
+Bpmn.Event.Bus.publish(:escalation, "approval_needed", %{code: "ESC-001"})
+
+# List current subscribers
+Bpmn.Event.Bus.subscriptions(:message, "order_received")
+# => []  (consumed by the publish above)
+
+# Unsubscribe manually
+Bpmn.Event.Bus.unsubscribe(:signal, "system_alert")
+```
+
+Send tasks with `messageRef` automatically publish, and receive tasks with `messageRef` automatically subscribe. Intermediate throw events publish and intermediate catch events subscribe. Boundary events subscribe for message/signal/escalation and schedule timers.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on extending the library.

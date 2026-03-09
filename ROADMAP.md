@@ -30,17 +30,17 @@ Implement the stub modules to support real process execution.
 ### Events
 
 - [x] **End Event** — Mark the process path as completed. Handle event definitions: error (set error state in context), terminate (stop all parallel branches), and plain end (normal completion).
-- [ ] **Intermediate Throw Event** — Emit signals/messages/escalations into the event system (Phase 5).
-- [ ] **Intermediate Catch Event** — Pause execution and wait for an external event (timer, message, signal).
-- [ ] **Boundary Event** — Attach to tasks. Interrupting boundary events cancel the task; non-interrupting ones spawn a parallel path.
+- [x] **Intermediate Throw Event** — Emit signals/messages/escalations into the event system.
+- [x] **Intermediate Catch Event** — Pause execution and wait for an external event (timer, message, signal).
+- [x] **Boundary Event** — Attach to tasks. Supports error, message, signal, timer, and escalation event types.
 
 ### Gateways
 
 - [x] **Exclusive Gateway** — Evaluate conditions on all outgoing sequence flows, route the token down the first matching path (or the default flow).
 - [x] **Parallel Gateway** — Fork: release tokens to all outgoing flows concurrently. Join: wait until tokens arrive on all incoming flows before continuing.
 - [x] **Inclusive Gateway** — Fork: release tokens to all outgoing flows whose conditions evaluate to true. Join: synchronize all activated incoming paths.
-- [ ] **Complex Gateway** — Support custom activation rules.
-- [ ] **Event-Based Gateway** — Wait for one of several events and route based on which fires first.
+- [x] **Complex Gateway** — Support custom activation rules with expression-based join conditions.
+- [x] **Event-Based Gateway** — Wait for one of several events and route based on which fires first.
 
 ### Tasks
 
@@ -54,7 +54,7 @@ Implement the stub modules to support real process execution.
 ### Subprocesses
 
 - [x] **Embedded Subprocess** — Execute a nested set of elements within the parent process context.
-- [ ] **Call Activity** — Reference and execute an external process definition by ID.
+- [x] **Call Activity** — Reference and execute an external process definition by ID via `Bpmn.Registry`.
 
 ## Phase 4: Execution Engine Improvements
 
@@ -72,12 +72,15 @@ Enhance the execution runtime for correctness and reliability.
 
 Add publish/subscribe infrastructure for BPMN events.
 
-- [ ] **Event bus** — A GenServer or `Registry`-based pub/sub system for message, signal, and timer events.
-- [ ] **Message events** — Correlate incoming messages to waiting receive tasks or intermediate catch events by message name and correlation keys.
-- [ ] **Signal events** — Broadcast signals to all waiting catch events and boundary events.
-- [ ] **Timer events** — Schedule timers using `Process.send_after/3` or a library like Quantum. Support duration, date, and cycle timers.
-- [ ] **Escalation events** — Route escalations up the subprocess hierarchy.
+- [x] **Event bus** — `Bpmn.Event.Bus` — Registry-based pub/sub using `Bpmn.EventRegistry` with `:duplicate` keys. Message (point-to-point), signal and escalation (broadcast).
+- [x] **Message events** — Correlate incoming messages to waiting receive tasks or intermediate catch events by message name.
+- [x] **Signal events** — Broadcast signals to all waiting catch events and boundary events.
+- [x] **Timer events** — `Bpmn.Event.Timer` — ISO 8601 duration parsing, `Process.send_after/3` scheduling. Context handles `{:timer_fired, ...}` via `handle_info`.
+- [x] **Escalation events** — Broadcast escalations to subscribing boundary events.
 - [ ] **Conditional events** — Re-evaluate conditions when context data changes.
+- [ ] **Message correlation keys** — Advanced routing beyond name matching.
+- [ ] **Timer cycle parsing** — ISO 8601 repeating intervals.
+- [ ] **Signal/message-triggered start events** — Auto-create process instances on event.
 
 ## Phase 6: Expression Engine
 

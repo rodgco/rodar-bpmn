@@ -30,21 +30,26 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 
 - **`Bpmn`** — Main dispatcher; `execute/2` (backward compat) and `execute/3` (with token tracking + execution history). Dispatches to handler modules via private `dispatch/2`.
 - **`Bpmn.Token`** — Execution token struct (id, current_node, state, parent_id, created_at). `new/1` generates UUID, `fork/1` creates child tokens for parallel branches.
-- **`Bpmn.Context`** — GenServer-based state management with `get/2`, `put_data/3`, `get_data/2`, `put_meta/3`, `get_meta/2`, `record_token/3`, `token_count/2`, `record_activated_paths/3`, `swap_process/2`, `get_state/1`, `start_supervised/2`. Includes execution history API: `record_visit/2`, `record_completion/4`, `get_history/1`, `get_node_history/2`.
+- **`Bpmn.Context`** — GenServer-based state management with `get/2`, `put_data/3`, `get_data/2`, `put_meta/3`, `get_meta/2`, `record_token/3`, `token_count/2`, `record_activated_paths/3`, `swap_process/2`, `get_state/1`, `start_supervised/2`. Includes execution history API: `record_visit/2`, `record_completion/4`, `get_history/1`, `get_node_history/2`. Handles `{:timer_fired, ...}` and `{:bpmn_event, ...}` via `handle_info`.
 - **`Bpmn.Registry`** — GenServer + Elixir Registry for process definition storage. `register/2`, `lookup/1`, `unregister/1`, `list/0`.
 - **`Bpmn.Process`** — Process lifecycle GenServer. `start_link/2`, `create_and_run/2`, `activate/1`, `suspend/1`, `resume/1`, `terminate/1`, `status/1`, `get_context/1`.
+- **`Bpmn.Event.Bus`** — Registry-based pub/sub using `Bpmn.EventRegistry` (`:duplicate` keys). `subscribe/3`, `unsubscribe/2`, `publish/3` (message=point-to-point, signal/escalation=broadcast), `subscriptions/2`.
+- **`Bpmn.Event.Timer`** — ISO 8601 duration parsing (`parse_duration/1`), `schedule/4` via `Process.send_after`, `cancel/1`.
+- **`Bpmn.Event.Intermediate.Throw`** — Publishes message/signal/escalation to event bus, releases token.
+- **`Bpmn.Event.Intermediate.Catch`** — Subscribes to event bus or schedules timer; returns `{:manual, _}`. Has `resume/3`.
+- **`Bpmn.Event.Boundary`** — Full implementation: error (direct activation), message/signal/escalation (event bus), timer (scheduled).
 - **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows
-- **`Bpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`, returns process maps keyed by element ID
+- **`Bpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`, returns process maps keyed by element ID. Splits `intermediateThrowEvent` → `:bpmn_event_intermediate_throw`, `intermediateCatchEvent` → `:bpmn_event_intermediate_catch`.
 - **`Bpmn.Port.Nodejs`** — GenServer managing a Node.js child process via Erlang ports (JSON protocol with Jason)
 
 ### Supervision Tree
 
-`Bpmn.Application` starts: `Bpmn.ProcessRegistry` (Elixir Registry), `Bpmn.Registry`, `Bpmn.ContextSupervisor` (DynamicSupervisor), `Bpmn.ProcessSupervisor` (DynamicSupervisor), `Bpmn.Port.Supervisor`.
+`Bpmn.Application` starts: `Bpmn.ProcessRegistry` (Elixir Registry, `:unique`), `Bpmn.EventRegistry` (Elixir Registry, `:duplicate`), `Bpmn.Registry`, `Bpmn.ContextSupervisor` (DynamicSupervisor), `Bpmn.ProcessSupervisor` (DynamicSupervisor), `Bpmn.Port.Supervisor`.
 
 ### Module Organization
 
-- `lib/bpmn/activity/` — Tasks (user, script, service, send, receive, manual) and subprocesses
-- `lib/bpmn/event/` — Start, end, intermediate, boundary events
+- `lib/bpmn/activity/` — Tasks (user, script, service, send, receive, manual) and subprocesses (embedded, call activity)
+- `lib/bpmn/event/` — Start, end, intermediate (throw/catch), boundary events, event bus, timer utilities
 - `lib/bpmn/gateway/` — Exclusive, parallel, inclusive, complex, event-based gateways
 - `lib/bpmn/port/` — Node.js port communication and supervisor
 

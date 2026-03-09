@@ -90,6 +90,28 @@ Bpmn.Activity.Task.Manual.resume(manual_task_element, context, %{signed: true})
 Bpmn.Activity.Task.Receive.resume(receive_task_element, context, %{payment_id: "PAY-123"})
 ```
 
+### Event Bus (Message and Signal Events)
+
+The event bus enables communication between process nodes via messages, signals, and escalations:
+
+```elixir
+# Subscribe a catch event to wait for a message
+Bpmn.Event.Bus.subscribe(:message, "order_received", %{
+  context: context,
+  node_id: "catch1",
+  outgoing: ["flow_out"]
+})
+
+# Publish a message (delivers to first subscriber, point-to-point)
+Bpmn.Event.Bus.publish(:message, "order_received", %{data: %{order_id: "123"}})
+
+# Publish a signal (broadcasts to ALL subscribers)
+Bpmn.Event.Bus.publish(:signal, "system_alert", %{data: %{level: "warning"}})
+
+# Send tasks auto-publish when messageRef is set
+# Receive tasks auto-subscribe when messageRef is set
+```
+
 ### Service Tasks
 
 Define a handler module implementing the `Bpmn.Activity.Task.Service.Handler` behaviour:
@@ -116,8 +138,13 @@ end
 | End Event (plain) | Implemented | Normal process completion |
 | End Event (error) | Implemented | Sets error state in context |
 | End Event (terminate) | Implemented | Marks process as terminated |
-| Intermediate Event | Stub | |
-| Boundary Event | Stub | |
+| Intermediate Throw Event | Implemented | Publishes message/signal/escalation to event bus |
+| Intermediate Catch Event | Implemented | Subscribes to event bus; returns `{:manual, _}` |
+| Boundary Event (error) | Implemented | Activated by parent activity on error |
+| Boundary Event (message) | Implemented | Subscribes to event bus |
+| Boundary Event (signal) | Implemented | Subscribes to event bus |
+| Boundary Event (timer) | Implemented | Schedules via `Process.send_after` |
+| Boundary Event (escalation) | Implemented | Subscribes to event bus |
 
 ### Gateways
 
@@ -126,8 +153,8 @@ end
 | Exclusive Gateway | Implemented | Condition evaluation, default flow |
 | Parallel Gateway | Implemented | Fork/join with token synchronization |
 | Inclusive Gateway | Implemented | Fork/join with condition evaluation and activated-path tracking |
-| Complex Gateway | Stub | Needs Phase 5 event bus |
-| Event-Based Gateway | Stub | Needs Phase 5 event bus |
+| Complex Gateway | Implemented | Expression-based activation rules; configurable join condition |
+| Event-Based Gateway | Implemented | Returns `{:manual, _}` with downstream catch event info |
 
 ### Tasks
 
@@ -136,8 +163,8 @@ end
 | Script Task | Implemented | Elixir and JavaScript (via Node.js port) |
 | User Task | Implemented | Pause/resume with `{:manual, task_data}` |
 | Service Task | Implemented | Handler behaviour callback |
-| Send Task | Implemented | Fire-and-forget; stores message metadata, releases token |
-| Receive Task | Implemented | Pause/resume like User Task; type `:receive_task` for event bus |
+| Send Task | Implemented | Publishes to event bus if `messageRef` present |
+| Receive Task | Implemented | Subscribes to event bus if `messageRef` present; auto-resume on match |
 | Manual Task | Implemented | Pause/resume like User Task; type `:manual_task` |
 
 ### Other
@@ -145,8 +172,10 @@ end
 | Element | Status | Notes |
 |---------|--------|-------|
 | Sequence Flow | Implemented | Conditional expressions supported |
-| Subprocess | Stub | |
+| Call Activity (Subprocess) | Implemented | Looks up external process from registry, executes in child context |
 | Embedded Subprocess | Implemented | Executes nested elements within parent context; error boundary event propagation |
+| Event Bus | Implemented | Registry-based pub/sub for message (point-to-point), signal/escalation (broadcast) |
+| Timer | Implemented | ISO 8601 duration parsing (`PT5S`, `PT1H30M`), `Process.send_after` scheduling |
 
 ## Architecture
 
@@ -161,6 +190,8 @@ The engine uses a **token-based execution model**. A `Bpmn.Token` struct tracks 
 - **`Bpmn.Process`** — Process lifecycle GenServer. Create instances, activate, suspend, resume, terminate. Tracks status transitions.
 - **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows.
 - **`Bpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`.
+- **`Bpmn.Event.Bus`** — Registry-based pub/sub for BPMN events (message, signal, escalation).
+- **`Bpmn.Event.Timer`** — ISO 8601 duration parsing and timer scheduling.
 - **`Bpmn.Port.Nodejs`** — GenServer managing a Node.js child process for JavaScript evaluation.
 
 ### Supervision Tree
@@ -168,6 +199,7 @@ The engine uses a **token-based execution model**. A `Bpmn.Token` struct tracks 
 ```
 Bpmn.Supervisor (one_for_one)
 ├── Bpmn.ProcessRegistry (Elixir Registry, :unique keys)
+├── Bpmn.EventRegistry (Elixir Registry, :duplicate keys — event bus pub/sub)
 ├── Bpmn.Registry (GenServer for process definitions)
 ├── Bpmn.ContextSupervisor (DynamicSupervisor for context processes)
 ├── Bpmn.ProcessSupervisor (DynamicSupervisor for process instances)
