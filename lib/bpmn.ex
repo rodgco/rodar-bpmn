@@ -42,7 +42,7 @@ defmodule Bpmn do
         id: "EndEvent_1s3wrav",
         name: "END",
         incoming: ["SequenceFlow_1keu1zs"],
-        definitions: [{:error_event_definition, %{}}]
+        errorEventDefinition: {:bpmn_event_definition_error, %{}}
       }
     }
 
@@ -184,6 +184,12 @@ defmodule Bpmn do
 
   defp dispatch({:bpmn_event_intermediate, _} = elem, context),
     do: Bpmn.Event.Intermediate.token_in(elem, context)
+
+  defp dispatch({:bpmn_event_intermediate_throw, _} = elem, context),
+    do: Bpmn.Event.Intermediate.Throw.token_in(elem, context)
+
+  defp dispatch({:bpmn_event_intermediate_catch, _} = elem, context),
+    do: Bpmn.Event.Intermediate.Catch.token_in(elem, context)
 
   defp dispatch({:bpmn_event_boundary, _} = elem, context),
     do: Bpmn.Event.Boundary.token_in(elem, context)

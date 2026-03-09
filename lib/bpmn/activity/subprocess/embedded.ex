@@ -89,16 +89,15 @@ defmodule Bpmn.Activity.Subprocess.Embedded do
 
   defp find_error_boundary(process, subprocess_id) do
     Enum.find_value(process, fn
-      {_id,
-       {:bpmn_event_boundary, %{attachedToRef: ^subprocess_id, definitions: definitions}} = elem} ->
-        if has_error_definition?(definitions), do: elem
+      {_id, {:bpmn_event_boundary, %{attachedToRef: ^subprocess_id} = attrs} = elem} ->
+        if has_error_definition?(attrs), do: elem
 
       _ ->
         nil
     end)
   end
 
-  defp has_error_definition?(definitions) do
-    Enum.any?(definitions, &match?({:error_event_definition, _}, &1))
+  defp has_error_definition?(attrs) do
+    match?({:bpmn_event_definition_error, _}, Map.get(attrs, :errorEventDefinition))
   end
 end

@@ -1,22 +1,56 @@
 defmodule Bpmn.Gateway.Exclusive.Event do
   @moduledoc """
-  Handle passing the token through an event-based gateway element.
+  Handle passing the token through an event-based exclusive gateway element.
 
-    iex> Bpmn.Gateway.Exclusive.Event.token_in(%{}, nil)
-    {:not_implemented}
+  An event-based gateway routes the token based on which downstream catch
+  event fires first. It subscribes all downstream catch events to the event
+  bus; the first one to fire wins, cancelling all other subscriptions.
+
+  ## Examples
+
+      iex> {:ok, context} = Bpmn.Context.start_link(%{}, %{})
+      iex> elem = {:bpmn_gateway_exclusive_event, %{id: "egw1", outgoing: ["f1", "f2"]}}
+      iex> {:manual, task_data} = Bpmn.Gateway.Exclusive.Event.token_in(elem, context)
+      iex> task_data.id
+      "egw1"
 
   """
 
   @doc """
-  Receive the token for the element and decide if the business logic should be executed
+  Receive the token for the element and set up event subscriptions.
   """
   @spec token_in(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
-  def token_in(elem, context), do: execute(elem, context)
-  defp token_out(_elem, _context), do: {:not_implemented}
+  def token_in({:bpmn_gateway_exclusive_event, %{id: id, outgoing: outgoing}}, context) do
+    process = Bpmn.Context.get(context, :process)
 
-  @doc """
-  Execute the event-based gateway business logic
-  """
-  @spec execute(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
-  def execute(elem, context), do: token_out(elem, context)
+    # Find downstream catch events
+    catch_events =
+      outgoing
+      |> Enum.map(fn flow_id ->
+        case Map.get(process, flow_id) do
+          {:bpmn_sequence_flow, %{targetRef: target_ref}} ->
+            {flow_id, Map.get(process, target_ref)}
+
+          _ ->
+            {flow_id, nil}
+        end
+      end)
+      |> Enum.reject(fn {_flow_id, elem} -> is_nil(elem) end)
+
+    Bpmn.Context.put_meta(context, id, %{
+      active: true,
+      completed: false,
+      type: :event_gateway,
+      pending_events: Enum.map(catch_events, fn {flow_id, _} -> flow_id end)
+    })
+
+    {:manual,
+     %{
+       id: id,
+       type: :event_gateway,
+       outgoing: outgoing,
+       context: context,
+       catch_events: catch_events
+     }}
+  end
 end

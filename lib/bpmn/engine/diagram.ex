@@ -233,7 +233,7 @@ defmodule Bpmn.Engine.Diagram do
 
   defp load_element("bpmn2:intermediateThrowEvent", attrs, elems),
     do:
-      {:bpmn_event_intermediate,
+      {:bpmn_event_intermediate_throw,
        Map.merge(attrs, %{
          incoming: load_elements("bpmn2:incoming", elems),
          outgoing: load_elements("bpmn2:outgoing", elems),
@@ -250,7 +250,7 @@ defmodule Bpmn.Engine.Diagram do
 
   defp load_element("bpmn2:intermediateCatchEvent", attrs, elems),
     do:
-      {:bpmn_event_intermediate,
+      {:bpmn_event_intermediate_catch,
        Map.merge(attrs, %{
          incoming: load_elements("bpmn2:incoming", elems),
          outgoing: load_elements("bpmn2:outgoing", elems),

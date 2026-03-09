@@ -2,9 +2,9 @@ defmodule Bpmn.Activity.Task.Send do
   @moduledoc """
   Handle passing the token through a send task element.
 
-  A send task is fire-and-forget: it stores message metadata in the context
-  and immediately releases the token to outgoing flows. Phase 5 event bus
-  will add actual message emission.
+  A send task stores message metadata in the context and releases the token
+  to outgoing flows. If a `messageRef` is present, it publishes the message
+  to the event bus for automatic delivery to waiting receive tasks/catch events.
 
   ## Examples
 
@@ -21,6 +21,7 @@ defmodule Bpmn.Activity.Task.Send do
 
   @doc """
   Receive the token for the element. Stores message metadata and releases token.
+  If `messageRef` is present, publishes to the event bus.
   """
   @spec token_in(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
   def token_in(
@@ -33,6 +34,16 @@ defmodule Bpmn.Activity.Task.Send do
       type: :send_task,
       message_name: Map.get(attrs, :name)
     })
+
+    # Publish to event bus if messageRef is present
+    case Map.get(attrs, :messageRef) do
+      nil ->
+        :ok
+
+      message_ref ->
+        data = Bpmn.Context.get(context, :data)
+        Bpmn.Event.Bus.publish(:message, message_ref, %{source: id, data: data})
+    end
 
     Bpmn.release_token(outgoing, context)
   end

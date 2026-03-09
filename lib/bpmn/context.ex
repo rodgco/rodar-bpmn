@@ -308,6 +308,23 @@ defmodule Bpmn.Context do
     {:reply, filtered, state}
   end
 
+  @impl true
+  def handle_info({:timer_fired, node_id, outgoing}, state) do
+    nodes = Map.put(state.nodes, node_id, %{active: false, completed: true, type: :catch_event})
+    new_state = %{state | nodes: nodes}
+    context = self()
+    spawn(fn -> Bpmn.release_token(outgoing, context) end)
+    {:noreply, new_state}
+  end
+
+  def handle_info({:bpmn_event, _type, _name, _payload, metadata}, state) do
+    %{node_id: node_id, outgoing: outgoing, context: context} = metadata
+    nodes = Map.put(state.nodes, node_id, %{active: false, completed: true, type: :catch_event})
+    new_state = %{state | nodes: nodes}
+    spawn(fn -> Bpmn.release_token(outgoing, context) end)
+    {:noreply, new_state}
+  end
+
   defp update_first_match([], _node_id, _token_id, _result_type), do: []
 
   defp update_first_match([entry | rest], node_id, token_id, result_type) do

@@ -1,8 +1,12 @@
 defmodule Bpmn.Event.Intermediate do
   @moduledoc """
-  Handle passing the token through an event element.
+  Handle passing the token through an intermediate event element.
 
-    iex> Bpmn.Event.Intermediate.token_in(%{}, nil)
+  This module is kept for backward compatibility with the legacy
+  `:bpmn_event_intermediate` tag. New code should use
+  `Bpmn.Event.Intermediate.Throw` and `Bpmn.Event.Intermediate.Catch`.
+
+    iex> Bpmn.Event.Intermediate.token_in({:bpmn_event_intermediate, %{}}, nil)
     {:not_implemented}
 
   """
@@ -11,12 +15,5 @@ defmodule Bpmn.Event.Intermediate do
   Receive the token for the element and decide if the business logic should be executed
   """
   @spec token_in(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
-  def token_in(elem, context), do: execute(elem, context)
-  defp token_out(_elem, _context), do: {:not_implemented}
-
-  @doc """
-  Execute the intermediate event business logic
-  """
-  @spec execute(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
-  def execute(elem, context), do: token_out(elem, context)
+  def token_in(_elem, _context), do: {:not_implemented}
 end

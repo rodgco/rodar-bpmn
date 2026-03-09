@@ -15,7 +15,11 @@ defmodule Bpmn.ErrorPropagationTest do
            id: "boundary_1",
            attachedToRef: "sub",
            outgoing: ["error_flow"],
-           definitions: [{:error_event_definition, %{}}]
+           errorEventDefinition: {:bpmn_event_definition_error, %{_elems: []}},
+           messageEventDefinition: nil,
+           signalEventDefinition: nil,
+           timerEventDefinition: nil,
+           escalationEventDefinition: nil
          }}
 
       error_end = {:bpmn_event_end, %{id: "error_end", incoming: ["error_flow"], outgoing: []}}
@@ -112,7 +116,11 @@ defmodule Bpmn.ErrorPropagationTest do
            id: "boundary_1",
            attachedToRef: "sub",
            outgoing: ["timer_flow"],
-           definitions: [{:timer_event_definition, %{}}]
+           errorEventDefinition: nil,
+           timerEventDefinition: {:bpmn_event_definition_timer, %{_elems: []}},
+           messageEventDefinition: nil,
+           signalEventDefinition: nil,
+           escalationEventDefinition: nil
          }}
 
       process = %{

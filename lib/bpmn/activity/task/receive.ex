@@ -6,8 +6,8 @@ defmodule Bpmn.Activity.Task.Receive do
   that an external message must be received before the process can continue.
   Use `resume/3` to continue execution once the message arrives.
 
-  Phase 5 event bus will enable automatic resume on message match via the
-  `:receive_task` type metadata.
+  If `messageRef` is present, the task subscribes to the event bus for
+  automatic resume when a matching message is published.
 
   ## Examples
 
@@ -21,6 +21,7 @@ defmodule Bpmn.Activity.Task.Receive do
 
   @doc """
   Receive the token for the element. Pauses execution and returns task data.
+  If `messageRef` is present, subscribes to event bus for auto-resume.
   """
   @spec token_in(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
   def token_in(
@@ -35,6 +36,19 @@ defmodule Bpmn.Activity.Task.Receive do
     }
 
     Bpmn.Context.put_meta(context, id, %{active: true, completed: false, type: :receive_task})
+
+    # Subscribe to event bus if messageRef is present
+    case Map.get(attrs, :messageRef) do
+      nil ->
+        :ok
+
+      message_ref ->
+        Bpmn.Event.Bus.subscribe(:message, message_ref, %{
+          context: context,
+          node_id: id,
+          outgoing: outgoing
+        })
+    end
 
     {:manual, task_data}
   end
