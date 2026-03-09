@@ -12,11 +12,11 @@ If you're familiar with OTP but new to BPMN, here are the core concepts:
 - **Task** — A unit of work (script, service call, user interaction, etc.).
 - **Gateway** — A branching/merging point. An exclusive gateway routes the token down exactly one path based on conditions.
 - **Sequence Flow** — A directed edge connecting two nodes, optionally with a condition expression.
-- **Token** — An execution pointer that travels through the process graph. When a node completes, it releases a token to the next node(s) via outgoing sequence flows.
+- **Token** — An execution pointer (`Bpmn.Token` struct) that travels through the process graph. Tokens have an ID, current node, state (active/completed/waiting/error), and parent reference (for subprocess and parallel gateway tracking). When a node completes, it releases a token to the next node(s) via outgoing sequence flows.
 
 ## Current Status
 
-This library is at version `0.1.0-dev` targeting Elixir ~> 1.16 with OTP 27+. The following are fully implemented: start events, end events (plain, error, terminate), sequence flows with condition expressions, exclusive/parallel/inclusive gateways, script/user/service/manual/send/receive tasks, and embedded subprocesses. Complex gateways, event-based gateways, intermediate events, and boundary events are defined but awaiting the Phase 5 event bus.
+This library is at version `0.1.0-dev` targeting Elixir ~> 1.16 with OTP 27+. The following are fully implemented: start events, end events (plain, error, terminate), sequence flows with condition expressions, exclusive/parallel/inclusive gateways, script/user/service/manual/send/receive tasks, embedded subprocesses (with error boundary event propagation), token-based execution tracking, process registry, process lifecycle management, context supervision, and execution history. Complex gateways, event-based gateways, intermediate events, and boundary events are defined but awaiting the Phase 5 event bus.
 
 ## Setup
 
@@ -34,7 +34,7 @@ Then fetch and compile:
 mix deps.get && mix compile
 ```
 
-The OTP application starts automatically — `Bpmn.Application` launches a supervisor tree that includes `Bpmn.Port.Supervisor` (for the Node.js port used by script tasks).
+The OTP application starts automatically — `Bpmn.Application` launches a supervisor tree that includes `Bpmn.ProcessRegistry` (for process definition lookup), `Bpmn.Registry` (process definition storage), `Bpmn.ContextSupervisor` and `Bpmn.ProcessSupervisor` (dynamic supervisors for process instances), and `Bpmn.Port.Supervisor` (for the Node.js port used by script tasks).
 
 ## Loading a BPMN Diagram
 
@@ -109,9 +109,39 @@ A sequence flow with a condition:
 }}
 ```
 
+## Process Registry and Lifecycle
+
+The recommended way to run processes is through the registry and lifecycle system:
+
+```elixir
+# Register a parsed process definition
+{:bpmn_process, _attrs, _elements} = process = hd(diagram.processes)
+Bpmn.Registry.register("user-login", process)
+
+# List registered processes
+Bpmn.Registry.list()
+# => ["user-login"]
+
+# Create and run an instance (creates supervised context, finds start event, executes)
+{:ok, pid} = Bpmn.Process.create_and_run("user-login", %{"username" => "alice"})
+
+# Check instance status
+Bpmn.Process.status(pid)
+# => :completed (or :running, :suspended, :error, :terminated)
+
+# Access the context for data inspection
+context = Bpmn.Process.get_context(pid)
+Bpmn.Context.get_data(context, "result")
+
+# Process lifecycle management
+Bpmn.Process.suspend(pid)   # Pause a running process
+Bpmn.Process.resume(pid)    # Resume a suspended process
+Bpmn.Process.terminate(pid) # Stop a process and its context
+```
+
 ## Creating an Execution Context
 
-The execution context is an Agent that tracks process state. Create one with `Bpmn.Context.start_link/2`:
+The execution context is a GenServer that tracks process state. Create one with `Bpmn.Context.start_link/2`:
 
 ```elixir
 # Extract the first process's element map
@@ -119,6 +149,9 @@ The execution context is an Agent that tracks process state. Create one with `Bp
 
 # Start a context with the process elements and initial data
 {:ok, context} = Bpmn.Context.start_link(elements, %{"username" => "alice", "password" => "secret"})
+
+# Or start a supervised context (under Bpmn.ContextSupervisor)
+{:ok, context} = Bpmn.Context.start_supervised(elements, %{"username" => "alice"})
 ```
 
 The first argument is the process element map (used to look up nodes during execution). The second is the initial data, accessible later via the context.
@@ -150,28 +183,51 @@ Bpmn.Context.node_active?(context, "StartEvent_1")
 # => false
 ```
 
+### Execution History
+
+The context records every node visit during execution, enabling debugging and audit trails:
+
+```elixir
+# Get full execution history
+Bpmn.Context.get_history(context)
+# => [%{node_id: "start_1", token_id: "abc...", node_type: :bpmn_event_start,
+#       timestamp: 123456, result: :ok}, ...]
+
+# Filter by node
+Bpmn.Context.get_node_history(context, "start_1")
+
+# Get full state snapshot (for inspection or crash recovery)
+Bpmn.Context.get_state(context)
+# => %{init: %{...}, data: %{...}, process: %{...}, nodes: %{...}, history: [...]}
+```
+
 ## Executing a Process
 
-Execution starts by calling `Bpmn.execute/2` with a node tuple and a context. The `execute/2` function pattern-matches on the node's tag to dispatch to the appropriate module:
+Execution starts by calling `Bpmn.execute/2` with a node tuple and a context. The `execute/2` function pattern-matches on the node's tag to dispatch to the appropriate module. For token-tracked execution, use `Bpmn.execute/3` with a `Bpmn.Token`:
 
 ```elixir
 # Get the start event from the process
 start_event = elements["StartEvent_1"]
 # => {:bpmn_event_start, %{outgoing: ["SequenceFlow_0u2ggjm"], ...}}
 
-# Execute it
+# Simple execution (creates a root token automatically)
 result = Bpmn.execute(start_event, context)
+
+# Or with explicit token tracking
+token = Bpmn.Token.new()
+result = Bpmn.execute(start_event, context, token)
 ```
 
 ### How Execution Propagates
 
-1. `Bpmn.execute/2` matches `{:bpmn_event_start, _}` and calls `Bpmn.Event.Start.token_in/2`.
-2. `token_in/2` extracts the `outgoing` sequence flow IDs.
-3. It calls `Bpmn.release_token/2` with those IDs and the context.
-4. `release_token/2` looks up each target node in the process map via `Bpmn.next/2` and calls `Bpmn.execute/2` on it.
-5. This continues recursively until a terminal node is reached.
+1. `Bpmn.execute/2` creates a root `Bpmn.Token` and delegates to `execute/3`.
+2. `execute/3` updates `token.current_node`, records a history visit, and dispatches to the handler's `token_in/2`.
+3. `token_in/2` extracts the `outgoing` sequence flow IDs.
+4. It calls `Bpmn.release_token/2` (or `/3` with token) with those IDs and the context.
+5. `release_token` looks up each target node in the process map via `Bpmn.next/2` and calls `Bpmn.execute` on it.
+6. This continues recursively until a terminal node is reached.
 
-When there are multiple outgoing targets (e.g., from a parallel gateway), `release_token/2` uses `Task.async_stream/2` to execute branches concurrently.
+When there are multiple outgoing targets (e.g., from a parallel gateway), `release_token` uses `Task.async_stream/2` to execute branches concurrently. With token tracking (`release_token/3`), each branch receives a child token created via `Bpmn.Token.fork/1`.
 
 ### Result Tuples
 
@@ -316,15 +372,43 @@ Bpmn.execute(start, ctx)
 - `Bpmn.SequenceFlow` — Conditional expression evaluation
 - `Bpmn.Activity.Subprocess.Embedded` — Executes nested elements within parent context
 
+## Implemented Modules
+
+**Execution Infrastructure:**
+- `Bpmn.Token` — Token struct with ID generation, forking for parallel branches
+- `Bpmn.Registry` — Process definition registry (register, lookup, list, unregister)
+- `Bpmn.Process` — Process lifecycle GenServer (create, activate, suspend, resume, terminate)
+- `Bpmn.Context` — GenServer-based execution context with history tracking
+
+**Events:**
+- `Bpmn.Event.Start` — Routes token to outgoing flows
+- `Bpmn.Event.End` — Normal completion, error (sets error state), and terminate (stops parallel branches)
+
+**Tasks:**
+- `Bpmn.Activity.Task.Script` — Elixir and JavaScript execution (via Node.js port)
+- `Bpmn.Activity.Task.User` — Pauses execution, returns `{:manual, task_data}`, `resume/3` to continue
+- `Bpmn.Activity.Task.Service` — Invokes a handler module implementing `Bpmn.Activity.Task.Service.Handler`
+- `Bpmn.Activity.Task.Manual` — Pauses execution like User Task, type `:manual_task`
+- `Bpmn.Activity.Task.Send` — Fire-and-forget; stores message metadata, releases token immediately
+- `Bpmn.Activity.Task.Receive` — Pauses execution like User Task, type `:receive_task`
+
+**Gateways:**
+- `Bpmn.Gateway.Exclusive` — Evaluates conditions, routes to first match or default flow
+- `Bpmn.Gateway.Parallel` — Fork: tokens to all outgoing; Join: waits for all incoming
+- `Bpmn.Gateway.Inclusive` — Fork: tokens to all matching conditions; Join: waits for activated paths only
+
+**Other:**
+- `Bpmn.SequenceFlow` — Conditional expression evaluation
+- `Bpmn.Activity.Subprocess.Embedded` — Executes nested elements within parent context; error boundary event propagation
+
 ## Not Yet Implemented (Stubs)
 
 The following modules are defined but return `{:not_implemented}`, awaiting the Phase 5 event bus or other prerequisites:
 
 - `Bpmn.Event.Intermediate` — Intermediate throw/catch events
-- `Bpmn.Event.Boundary` — Boundary events (parser support added)
+- `Bpmn.Event.Boundary` — Boundary events (parser support added; error boundaries triggered by subprocess handler)
 - `Bpmn.Gateway.Exclusive.Event` — Event-based exclusive gateway
 - `Bpmn.Gateway.Complex` — Complex gateway
-- `Bpmn.Activity.Subprocess` — Call activity (needs process registry)
-- `Bpmn.Process` — Process activation and token management
+- `Bpmn.Activity.Subprocess` — Call activity
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on extending the library.

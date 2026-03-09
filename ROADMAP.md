@@ -60,12 +60,12 @@ Implement the stub modules to support real process execution.
 
 Enhance the execution runtime for correctness and reliability.
 
-- [ ] **Token model** — Introduce a token struct with an ID, current node, state (active/completed/waiting), and parent token (for subprocess tracking). Replace the implicit "token as function call" model.
-- [ ] **Process registry** — Implement the registry described in `Bpmn` moduledoc. Register loaded process definitions by ID so any node can look them up at runtime. Use Elixir's built-in `Registry` module.
-- [ ] **Process lifecycle** — Implement `Bpmn.Process` with `activate/1`, `suspend/1`, `resume/1`, `terminate/1`. Track process instance state (created, running, suspended, completed, terminated).
-- [ ] **Context supervision** — Replace the plain Agent with a supervised GenServer. Handle crashes gracefully by restarting from the last known state.
-- [ ] **Execution history** — Record each node visit, timestamp, input data, and output data. Useful for debugging and audit trails.
-- [ ] **Error propagation** — Implement BPMN error handling: when an error is thrown, walk up the scope tree looking for a matching boundary error event. If none is found, propagate to the process level.
+- [x] **Token model** — Introduce a token struct with an ID, current node, state (active/completed/waiting), and parent token (for subprocess tracking). Replace the implicit "token as function call" model.
+- [x] **Process registry** — Implement the registry described in `Bpmn` moduledoc. Register loaded process definitions by ID so any node can look them up at runtime. Use Elixir's built-in `Registry` module.
+- [x] **Process lifecycle** — Implement `Bpmn.Process` with `activate/1`, `suspend/1`, `resume/1`, `terminate/1`. Track process instance state (created, running, suspended, completed, terminated).
+- [x] **Context supervision** — Replace the plain Agent with a supervised GenServer. Handle crashes gracefully by restarting from the last known state.
+- [x] **Execution history** — Record each node visit, timestamp, input data, and output data. Useful for debugging and audit trails.
+- [x] **Error propagation** — Implement BPMN error handling: when an error is thrown, walk up the scope tree looking for a matching boundary error event. If none is found, propagate to the process level.
 - [ ] **Compensation** — Track completed activities and their compensation handlers. When a compensate event is triggered, execute compensation in reverse completion order.
 
 ## Phase 5: Event System

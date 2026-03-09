@@ -1,7 +1,6 @@
 # Building and Testing
 
-This document describes how to set up your development environment to build and test hashiru-bpmn.
-It also explains the basic mechanics of using git, elixir, and hex.
+This document describes how to set up your development environment to build and test Rodar BPMN.
 
 * [Prerequisite Software](#prerequisite-software)
 * [Getting the Sources](#getting-the-sources)
@@ -10,48 +9,46 @@ It also explains the basic mechanics of using git, elixir, and hex.
 * [Building Documentation Locally](#building-documentation-locally)
 * [Running Tests Locally](#running-tests-locally)
 
-See the [contribution guidelines](https://github.com/around25/hashiru-bpmn/blob/develop/CONTRIBUTING.md)
-if you'd like to contribute to hashiru-bpmn.
+See the [contribution guidelines](CONTRIBUTING.md) if you'd like to contribute to Rodar BPMN.
 
 ## Prerequisite Software
 
-Before you can build and test hashiru-bpmn, you must install and configure the
+Before you can build and test Rodar BPMN, you must install and configure the
 following products on your development machine:
 
 * [Git](http://git-scm.com) and/or the **GitHub app** (for [Mac](http://mac.github.com) or
   [Windows](http://windows.github.com)); [GitHub's Guide to Installing
   Git](https://help.github.com/articles/set-up-git) is a good source of information.
 
-* [Elixir](https://elixir-lang.org) which is used to run the code and tests, and generate distributable files.
+* [Elixir](https://elixir-lang.org) (~> 1.16) with OTP 27+, which is used to run the code and tests.
 
 ## Getting the Sources
 
-Fork and clone the hashiru-bpmn repository:
+Fork and clone the Rodar BPMN repository:
 
 1. Login to your GitHub account or create one by following the instructions given
    [here](https://github.com/signup/free).
-2. [Fork](http://help.github.com/forking) the [main hashiru-bpmn
-   repository](https://github.com/around25/hashiru-bpmn).
-3. Clone your fork of the hashiru-bpmn repository and define an `upstream` remote pointing back to
-   the hashiru-bpmn repository that you forked in the first place.
+2. [Fork](http://help.github.com/forking) the [main Rodar BPMN
+   repository](https://github.com/Around25/rodar-bpmn).
+3. Clone your fork of the repository and define an `upstream` remote pointing back to
+   the repository that you forked in the first place.
 
 ```shell
 # Clone your GitHub repository:
-git clone git@github.com:<github username>/hashiru-bpmn.git
+git clone git@github.com:<github username>/rodar-bpmn.git
 
-# Go to the hashiru-bpmn directory:
-cd hashiru-bpmn
+# Go to the rodar-bpmn directory:
+cd rodar-bpmn
 
-# Add the main hashiru-bpmn repository as an upstream remote to your repository:
-git remote add upstream https://github.com/around25/hashiru-bpmn.git
+# Add the main repository as an upstream remote to your repository:
+git remote add upstream https://github.com/Around25/rodar-bpmn.git
 ```
 
 ## Installing HEX packages
 
-Next, install the JavaScript modules needed to build and test gehashiru-bpmn:
+Next, install the Hex packages needed to build and test Rodar BPMN:
 
 ```shell
-# Install hashiru-bpmn project dependencies (mix.exs)
 mix local.hex --force
 mix local.rebar --force
 mix deps.get
@@ -61,7 +58,7 @@ mix compile
 
 ## Building
 
-To build hashiru-bpmn for ralease run:
+To build Rodar BPMN for release run:
 
 ```shell
 mix deps.get --only prod
@@ -76,22 +73,21 @@ mix release --warnings-as-errors --env=prod
 To generate the documentation:
 
 ```shell
-# Generate all hashiru-bpmn documentation
-$ mix docs
+mix docs
 ```
 
 ## Running Tests Locally
 
-To run tests:
+To run the full verification suite:
 
 ```shell
-# Run all hashiru-bpmn tests
-$ mix credo
-$ mix coveralls
+mix compile --warnings-as-errors  # Compile with strict warnings
+mix test                          # Run all tests
+mix credo                         # Lint
+mix dialyzer                      # Static type analysis
+mix coveralls                     # Tests with coverage report
 ```
 
-You should execute the test suites before submitting a PR to github.
+You should execute the test suites before submitting a PR to GitHub.
 
-All the tests are executed on our Continuous Integration infrastructure and a PR could only be merged once the tests pass.
-
-- Travis CI fails if any of the test suites described above fails.
+All tests are executed on our Continuous Integration infrastructure (GitHub Actions) and a PR can only be merged once all checks pass.

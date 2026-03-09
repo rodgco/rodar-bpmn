@@ -32,6 +32,29 @@ Requires Elixir ~> 1.16 and OTP 27+.
 
 ## Usage
 
+### Quick Start (Using Process Registry)
+
+```elixir
+# 1. Load and parse a BPMN diagram
+diagram = Bpmn.Engine.Diagram.load(File.read!("my_process.bpmn"))
+{:bpmn_process, _attrs, _elements} = process = hd(diagram.processes)
+
+# 2. Register the process definition
+Bpmn.Registry.register("my-process", process)
+
+# 3. Create and run a process instance
+{:ok, pid} = Bpmn.Process.create_and_run("my-process", %{"username" => "alice"})
+
+# 4. Check status and access results
+Bpmn.Process.status(pid)
+# => :completed
+
+context = Bpmn.Process.get_context(pid)
+Bpmn.Context.get_data(context, "result")
+```
+
+### Manual Execution
+
 ```elixir
 # 1. Load and parse a BPMN diagram
 diagram = Bpmn.Engine.Diagram.load(File.read!("my_process.bpmn"))
@@ -123,19 +146,33 @@ end
 |---------|--------|-------|
 | Sequence Flow | Implemented | Conditional expressions supported |
 | Subprocess | Stub | |
-| Embedded Subprocess | Implemented | Executes nested elements within parent context |
+| Embedded Subprocess | Implemented | Executes nested elements within parent context; error boundary event propagation |
 
 ## Architecture
 
-The engine uses a **token-based execution model**. Each BPMN node implements `token_in/2` to receive a token and routes it to the next node(s) via `Bpmn.release_token/2`.
+The engine uses a **token-based execution model**. A `Bpmn.Token` struct tracks the execution pointer (current node, state, parent token for forks). Each BPMN node implements `token_in/2` to receive a token and routes it to the next node(s) via `Bpmn.release_token/2`.
 
-Key modules:
+### Key Modules
 
-- **`Bpmn`** — Main dispatcher; pattern-matches element type tuples to handler modules
-- **`Bpmn.Context`** — Agent-based state management (process data, node metadata, token tracking)
-- **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows
-- **`Bpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`
-- **`Bpmn.Port.Nodejs`** — GenServer managing a Node.js child process for JavaScript evaluation
+- **`Bpmn`** — Main dispatcher; pattern-matches element type tuples to handler modules. `execute/2` (simple) and `execute/3` (with token tracking and execution history).
+- **`Bpmn.Token`** — Execution token struct with ID, current node, state, and parent tracking. Supports `fork/1` for parallel branches.
+- **`Bpmn.Context`** — GenServer-based state management (process data, node metadata, gateway token tracking, execution history).
+- **`Bpmn.Registry`** — Process definition registry using Elixir's `Registry` module. Register, lookup, and manage BPMN process definitions.
+- **`Bpmn.Process`** — Process lifecycle GenServer. Create instances, activate, suspend, resume, terminate. Tracks status transitions.
+- **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows.
+- **`Bpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`.
+- **`Bpmn.Port.Nodejs`** — GenServer managing a Node.js child process for JavaScript evaluation.
+
+### Supervision Tree
+
+```
+Bpmn.Supervisor (one_for_one)
+├── Bpmn.ProcessRegistry (Elixir Registry, :unique keys)
+├── Bpmn.Registry (GenServer for process definitions)
+├── Bpmn.ContextSupervisor (DynamicSupervisor for context processes)
+├── Bpmn.ProcessSupervisor (DynamicSupervisor for process instances)
+└── Bpmn.Port.Supervisor (Node.js port management)
+```
 
 ## Development
 
