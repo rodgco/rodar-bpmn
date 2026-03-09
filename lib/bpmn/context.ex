@@ -18,13 +18,18 @@ defmodule Bpmn.Context do
   """
 
   @doc "Start the context process"
-  def start_link(process, initData) do
+  @spec start_link(map(), map()) :: {:ok, pid()}
+  def start_link(process, init_data) do
     Agent.start_link(fn ->
       %{
-        init: initData,     # initial data for the context passed down from an external system
-        data: %{},          # current data saved in the context
-        process: process,   # the process definition to execute on
-        nodes: %{},         # information about each node that is executed
+        # initial data for the context passed down from an external system
+        init: init_data,
+        # current data saved in the context
+        data: %{},
+        # the process definition to execute on
+        process: process,
+        # information about each node that is executed
+        nodes: %{}
       }
     end)
   end
@@ -37,6 +42,7 @@ defmodule Bpmn.Context do
   - process: a representation of the current process that is executing
   - nodes: metadata about each node information
   """
+  @spec get(pid(), atom()) :: any()
   def get(context, key) do
     Agent.get(context, fn state -> state[key] end)
   end
@@ -44,16 +50,17 @@ defmodule Bpmn.Context do
   @doc """
   Persist a value under the given key in the data state of the context.
   """
+  @spec put_data(pid(), any(), any()) :: :ok
   def put_data(context, key, value) do
     Agent.update(context, fn state ->
-      update_in state.data, &Map.put(&1, key, value)
-#      %{state | data: Map.put(state.data, key, value)}
+      update_in(state.data, &Map.put(&1, key, value))
     end)
   end
 
   @doc """
   Load some information from the current data of the context from the given key
   """
+  @spec get_data(pid(), any()) :: any()
   def get_data(context, key) do
     Agent.get(context, fn state -> state.data[key] end)
   end
@@ -61,15 +68,17 @@ defmodule Bpmn.Context do
   @doc """
   Put metadata information for a node.
   """
+  @spec put_meta(pid(), any(), any()) :: :ok
   def put_meta(context, key, meta) do
     Agent.update(context, fn state ->
-      update_in state.nodes, &Map.put(&1, key, meta)
+      update_in(state.nodes, &Map.put(&1, key, meta))
     end)
   end
 
   @doc """
   Get meta data for a node
   """
+  @spec get_meta(pid(), any()) :: any()
   def get_meta(context, key) do
     Agent.get(context, fn state -> state.nodes[key] end)
   end
@@ -77,6 +86,7 @@ defmodule Bpmn.Context do
   @doc """
   Check if the node is active
   """
+  @spec is_node_active(pid(), any()) :: boolean()
   def is_node_active(context, key) do
     Agent.get(context, fn state -> state.nodes[key].active end)
   end
@@ -84,8 +94,8 @@ defmodule Bpmn.Context do
   @doc """
   Check if the node is completed
   """
+  @spec is_node_completed(pid(), any()) :: boolean()
   def is_node_completed(context, key) do
     Agent.get(context, fn state -> state.nodes[key].completed end)
   end
-
 end

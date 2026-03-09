@@ -25,19 +25,20 @@ defmodule Bpmn.Expression do
   @doc """
   Validate a Bpmn condition expression and return the result
   """
+  @spec execute({:bpmn_expression, {String.t(), String.t()}}, Bpmn.context()) :: {:ok, boolean()}
   def execute({:bpmn_expression, {_, ""}}, _), do: {:ok, true}
   def execute({:bpmn_expression, {lang, expr}}, context), do: {:ok, evaluate(lang, expr, context)}
 
   @doc """
     Evaluate an elixir expression within the given context
   """
+  @spec evaluate(String.t(), String.t(), Bpmn.context()) :: boolean()
   def evaluate("elixir", expr, context) do
     data = Bpmn.Context.get(context, :data)
     q = "f = fn (data) ->
     #{expr}
     end"
-    {_, binding} = Code.eval_string q
+    {_, binding} = Code.eval_string(q)
     binding[:f].(data)
   end
-
 end

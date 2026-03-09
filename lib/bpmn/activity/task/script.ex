@@ -1,6 +1,6 @@
 defmodule Bpmn.Activity.Task.Script do
   @moduledoc """
-  Handle passing the token through an event element.
+  Handle passing the token through a script task element.
 
     iex> Bpmn.Port.Nodejs.eval_string("1+1", %{cosmin: "soss"})
     %{"context" => %{"cosmin" => "soss"}, "script" => "1+1", "type" => "string"}
@@ -10,21 +10,21 @@ defmodule Bpmn.Activity.Task.Script do
   @doc """
   Receive the token for the element and decide if the business logic should be executed
   """
-  def tokenIn(elem, context), do: execute(elem, context)
+  @spec token_in(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
+  def token_in(elem, context), do: execute(elem, context)
 
-  defp tokenOut(elem, context), do: {:not_implemented}
+  defp token_out(_elem, _context), do: {:not_implemented}
 
   @doc """
-  Execute the start event business logic
+  Execute the script task business logic
   """
-  def execute({:bpmn_activity_task_script, %{outputs: outputs, type: type, script: script}}, context) do
-    IO.inspect Bpmn.Port.Nodejs.eval_string("1+3", %{testing: "something"})
-#    case Bpmn.Expression.execute(condition, context) do
-#      {:ok, true} -> execute({:bpmn_sequence_flow, {source, target}}, context)
-#      {:ok, false} -> {:false}
-#      _ -> {:error}
-#    end
+  @spec execute(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
+  def execute(
+        {:bpmn_activity_task_script, %{outputs: _outputs, type: _type, script: _script}},
+        _context
+      ) do
+    IO.inspect(Bpmn.Port.Nodejs.eval_string("1+3", %{testing: "something"}))
   end
-  def execute(elem, context), do: tokenOut(elem, context)
 
+  def execute(elem, context), do: token_out(elem, context)
 end

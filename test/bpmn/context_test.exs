@@ -5,7 +5,9 @@ defmodule Bpmn.ContextTest do
   doctest Bpmn.Context
 
   setup do
-    {:ok, context} = Context.start_link(%{id: "my_process"}, %{"username": "test", "password": "secret"})
+    {:ok, context} =
+      Context.start_link(%{id: "my_process"}, %{username: "test", password: "secret"})
+
     {:ok, context: context}
   end
 

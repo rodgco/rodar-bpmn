@@ -1,21 +1,17 @@
 defmodule Bpmn.Event.End do
   @moduledoc """
-  Handle passing the token through an event element.
+  Handle passing the token through an end event element.
 
-    iex> Bpmn.Event.End.tokenIn(%{}, nil)
-    {:not_implemented}
+    iex> {:ok, context} = Bpmn.Context.start_link(%{}, %{})
+    iex> {:ok, ^context} = Bpmn.Event.End.token_in({:bpmn_event_end, %{incoming: []}}, context)
+    iex> true
+    true
 
   """
 
   @doc """
   Receive the token for the element and decide if the business logic should be executed
   """
-  def tokenIn(elem, context), do: execute(elem, context)
-  defp tokenOut(elem, context), do: {:not_implemented}
-
-  @doc """
-  Execute the start event business logic
-  """
-  def execute(elem, context), do: tokenOut(elem, context)
-
+  @spec token_in(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
+  def token_in(_elem, context), do: {:ok, context}
 end

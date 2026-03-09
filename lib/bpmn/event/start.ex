@@ -38,12 +38,12 @@ defmodule Bpmn.Event.Start do
   ## Examples
 
     iex> {:ok, context} = Bpmn.Context.start_link(%{}, %{})
-    iex> {:ok, pid} = Bpmn.Event.Start.tokenIn({:bpmn_event_start, %{outgoing: []}}, context)
+    iex> {:ok, pid} = Bpmn.Event.Start.token_in({:bpmn_event_start, %{outgoing: []}}, context)
     iex> context == pid
     true
 
-    iex> {:ok, context} = Bpmn.Context.start_link(%{"to" => {:bpmn_activity_task_script, {}}}, %{})
-    iex> {:not_implemented} = Bpmn.Event.Start.tokenIn({:bpmn_event_start, %{outgoing: ["to"]}}, context)
+    iex> {:ok, context} = Bpmn.Context.start_link(%{"to" => {:bpmn_activity_task_script, %{}}}, %{})
+    iex> {:not_implemented} = Bpmn.Event.Start.token_in({:bpmn_event_start, %{outgoing: ["to"]}}, context)
     iex> true
     true
 
@@ -57,16 +57,17 @@ defmodule Bpmn.Event.Start do
     - Check the event definitions and wait for the event to be triggered before executing the event
 
   """
-  def tokenIn({:bpmn_event_start, %{outgoing: []}}, context), do: {:ok, context}
-  def tokenIn(elem, context), do: execute(elem, context)
+  @spec token_in(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
+  def token_in({:bpmn_event_start, %{outgoing: []}}, context), do: {:ok, context}
+  def token_in(elem, context), do: execute(elem, context)
 
   @doc """
   Execute the start event business logic
   """
+  @spec execute(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
   def execute({:bpmn_event_start, %{outgoing: outgoing} = _event}, context) do
-    tokenOut(outgoing, context)
+    token_out(outgoing, context)
   end
 
-  defp tokenOut(targets, context), do: Bpmn.releaseToken(targets, context)
-
+  defp token_out(targets, context), do: Bpmn.release_token(targets, context)
 end

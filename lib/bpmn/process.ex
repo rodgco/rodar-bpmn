@@ -8,14 +8,11 @@ defmodule Bpmn.Process do
   """
 
   def activate() do
-
   end
 
-  def tokenIn(token) do
-
+  def token_in(_token) do
   end
 
-  def tokenOut(token) do
-
+  def token_out(_token) do
   end
 end

@@ -1,8 +1,8 @@
 defmodule Bpmn.Activity.Task.Service do
   @moduledoc """
-  Handle passing the token through an event element.
+  Handle passing the token through a service task element.
 
-    iex> Bpmn.Activity.Task.Service.tokenIn(%{}, nil)
+    iex> Bpmn.Activity.Task.Service.token_in(%{}, nil)
     {:not_implemented}
 
   """
@@ -10,12 +10,13 @@ defmodule Bpmn.Activity.Task.Service do
   @doc """
   Receive the token for the element and decide if the business logic should be executed
   """
-  def tokenIn(elem, context), do: execute(elem, context)
-  defp tokenOut(elem, context), do: {:not_implemented}
+  @spec token_in(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
+  def token_in(elem, context), do: execute(elem, context)
+  defp token_out(_elem, _context), do: {:not_implemented}
 
   @doc """
-  Execute the start event business logic
+  Execute the service task business logic
   """
-  def execute(elem, context), do: tokenOut(elem, context)
-
+  @spec execute(Bpmn.element(), Bpmn.context()) :: Bpmn.result()
+  def execute(elem, context), do: token_out(elem, context)
 end
