@@ -17,21 +17,29 @@ defmodule Bpmn.Context do
 
   """
 
+  use GenServer
+
+  # --- Client API ---
+
   @doc "Start the context process"
-  @spec start_link(map(), map()) :: {:ok, pid()}
+  @spec start_link({map(), map()} | map(), map()) :: {:ok, pid()}
+  def start_link({process, init_data}) do
+    start_link(process, init_data)
+  end
+
   def start_link(process, init_data) do
-    Agent.start_link(fn ->
-      %{
-        # initial data for the context passed down from an external system
-        init: init_data,
-        # current data saved in the context
-        data: %{},
-        # the process definition to execute on
-        process: process,
-        # information about each node that is executed
-        nodes: %{}
-      }
-    end)
+    GenServer.start_link(__MODULE__, {process, init_data})
+  end
+
+  @doc """
+  Start a supervised context under `Bpmn.ContextSupervisor`.
+  """
+  @spec start_supervised(map(), map()) :: {:ok, pid()} | {:error, any()}
+  def start_supervised(process, init_data) do
+    DynamicSupervisor.start_child(
+      Bpmn.ContextSupervisor,
+      {__MODULE__, {process, init_data}}
+    )
   end
 
   @doc """
@@ -44,7 +52,7 @@ defmodule Bpmn.Context do
   """
   @spec get(pid(), atom()) :: any()
   def get(context, key) do
-    Agent.get(context, fn state -> state[key] end)
+    GenServer.call(context, {:get, key})
   end
 
   @doc """
@@ -52,9 +60,7 @@ defmodule Bpmn.Context do
   """
   @spec put_data(pid(), any(), any()) :: :ok
   def put_data(context, key, value) do
-    Agent.update(context, fn state ->
-      update_in(state.data, &Map.put(&1, key, value))
-    end)
+    GenServer.call(context, {:put_data, key, value})
   end
 
   @doc """
@@ -62,7 +68,7 @@ defmodule Bpmn.Context do
   """
   @spec get_data(pid(), any()) :: any()
   def get_data(context, key) do
-    Agent.get(context, fn state -> state.data[key] end)
+    GenServer.call(context, {:get_data, key})
   end
 
   @doc """
@@ -70,9 +76,7 @@ defmodule Bpmn.Context do
   """
   @spec put_meta(pid(), any(), any()) :: :ok
   def put_meta(context, key, meta) do
-    Agent.update(context, fn state ->
-      update_in(state.nodes, &Map.put(&1, key, meta))
-    end)
+    GenServer.call(context, {:put_meta, key, meta})
   end
 
   @doc """
@@ -80,7 +84,7 @@ defmodule Bpmn.Context do
   """
   @spec get_meta(pid(), any()) :: any()
   def get_meta(context, key) do
-    Agent.get(context, fn state -> state.nodes[key] end)
+    GenServer.call(context, {:get_meta, key})
   end
 
   @doc """
@@ -88,7 +92,7 @@ defmodule Bpmn.Context do
   """
   @spec node_active?(pid(), any()) :: boolean()
   def node_active?(context, key) do
-    Agent.get(context, fn state -> state.nodes[key].active end)
+    GenServer.call(context, {:node_active?, key})
   end
 
   @doc """
@@ -96,7 +100,7 @@ defmodule Bpmn.Context do
   """
   @spec node_completed?(pid(), any()) :: boolean()
   def node_completed?(context, key) do
-    Agent.get(context, fn state -> state.nodes[key].completed end)
+    GenServer.call(context, {:node_completed?, key})
   end
 
   @doc """
@@ -105,13 +109,7 @@ defmodule Bpmn.Context do
   """
   @spec record_token(pid(), String.t(), String.t()) :: non_neg_integer()
   def record_token(context, gateway_id, flow_id) do
-    Agent.get_and_update(context, fn state ->
-      tokens_key = {:gateway_tokens, gateway_id}
-      current = Map.get(state.nodes, tokens_key, MapSet.new())
-      updated = MapSet.put(current, flow_id)
-      new_state = update_in(state.nodes, &Map.put(&1, tokens_key, updated))
-      {MapSet.size(updated), new_state}
-    end)
+    GenServer.call(context, {:record_token, gateway_id, flow_id})
   end
 
   @doc """
@@ -119,10 +117,7 @@ defmodule Bpmn.Context do
   """
   @spec token_count(pid(), String.t()) :: non_neg_integer()
   def token_count(context, gateway_id) do
-    Agent.get(context, fn state ->
-      tokens_key = {:gateway_tokens, gateway_id}
-      state.nodes |> Map.get(tokens_key, MapSet.new()) |> MapSet.size()
-    end)
+    GenServer.call(context, {:token_count, gateway_id})
   end
 
   @doc """
@@ -130,10 +125,7 @@ defmodule Bpmn.Context do
   """
   @spec clear_tokens(pid(), String.t()) :: :ok
   def clear_tokens(context, gateway_id) do
-    Agent.update(context, fn state ->
-      tokens_key = {:gateway_tokens, gateway_id}
-      update_in(state.nodes, &Map.delete(&1, tokens_key))
-    end)
+    GenServer.call(context, {:clear_tokens, gateway_id})
   end
 
   @doc """
@@ -141,10 +133,7 @@ defmodule Bpmn.Context do
   """
   @spec record_activated_paths(pid(), String.t(), [String.t()]) :: :ok
   def record_activated_paths(context, gateway_id, flow_ids) do
-    Agent.update(context, fn state ->
-      key = {:gateway_activated_paths, gateway_id}
-      update_in(state.nodes, &Map.put(&1, key, flow_ids))
-    end)
+    GenServer.call(context, {:record_activated_paths, gateway_id, flow_ids})
   end
 
   @doc """
@@ -152,10 +141,7 @@ defmodule Bpmn.Context do
   """
   @spec get_activated_paths(pid(), String.t()) :: [String.t()] | nil
   def get_activated_paths(context, gateway_id) do
-    Agent.get(context, fn state ->
-      key = {:gateway_activated_paths, gateway_id}
-      Map.get(state.nodes, key)
-    end)
+    GenServer.call(context, {:get_activated_paths, gateway_id})
   end
 
   @doc """
@@ -163,10 +149,7 @@ defmodule Bpmn.Context do
   """
   @spec clear_activated_paths(pid(), String.t()) :: :ok
   def clear_activated_paths(context, gateway_id) do
-    Agent.update(context, fn state ->
-      key = {:gateway_activated_paths, gateway_id}
-      update_in(state.nodes, &Map.delete(&1, key))
-    end)
+    GenServer.call(context, {:clear_activated_paths, gateway_id})
   end
 
   @doc """
@@ -174,8 +157,165 @@ defmodule Bpmn.Context do
   """
   @spec swap_process(pid(), map()) :: map()
   def swap_process(context, new_process) do
-    Agent.get_and_update(context, fn state ->
-      {state.process, %{state | process: new_process}}
-    end)
+    GenServer.call(context, {:swap_process, new_process})
+  end
+
+  @doc """
+  Return the full state snapshot (for crash recovery and inspection).
+  """
+  @spec get_state(pid()) :: map()
+  def get_state(context) do
+    GenServer.call(context, :get_state)
+  end
+
+  @doc """
+  Record a node visit in execution history.
+  """
+  @spec record_visit(pid(), map()) :: :ok
+  def record_visit(context, entry) do
+    GenServer.call(context, {:record_visit, entry})
+  end
+
+  @doc """
+  Record the completion of a node visit, updating the last matching history entry.
+  """
+  @spec record_completion(pid(), String.t(), String.t(), atom()) :: :ok
+  def record_completion(context, node_id, token_id, result_type) do
+    GenServer.call(context, {:record_completion, node_id, token_id, result_type})
+  end
+
+  @doc """
+  Get the full execution history.
+  """
+  @spec get_history(pid()) :: [map()]
+  def get_history(context) do
+    GenServer.call(context, :get_history)
+  end
+
+  @doc """
+  Get execution history filtered by node ID.
+  """
+  @spec get_node_history(pid(), String.t()) :: [map()]
+  def get_node_history(context, node_id) do
+    GenServer.call(context, {:get_node_history, node_id})
+  end
+
+  # --- GenServer Callbacks ---
+
+  @impl true
+  def init({process, init_data}) do
+    {:ok,
+     %{
+       init: init_data,
+       data: %{},
+       process: process,
+       nodes: %{},
+       history: []
+     }}
+  end
+
+  @impl true
+  def handle_call({:get, key}, _from, state) do
+    {:reply, state[key], state}
+  end
+
+  def handle_call({:put_data, key, value}, _from, state) do
+    {:reply, :ok, update_in(state.data, &Map.put(&1, key, value))}
+  end
+
+  def handle_call({:get_data, key}, _from, state) do
+    {:reply, state.data[key], state}
+  end
+
+  def handle_call({:put_meta, key, meta}, _from, state) do
+    {:reply, :ok, update_in(state.nodes, &Map.put(&1, key, meta))}
+  end
+
+  def handle_call({:get_meta, key}, _from, state) do
+    {:reply, state.nodes[key], state}
+  end
+
+  def handle_call({:node_active?, key}, _from, state) do
+    {:reply, state.nodes[key].active, state}
+  end
+
+  def handle_call({:node_completed?, key}, _from, state) do
+    {:reply, state.nodes[key].completed, state}
+  end
+
+  def handle_call({:record_token, gateway_id, flow_id}, _from, state) do
+    tokens_key = {:gateway_tokens, gateway_id}
+    current = Map.get(state.nodes, tokens_key, MapSet.new())
+    updated = MapSet.put(current, flow_id)
+    new_state = update_in(state.nodes, &Map.put(&1, tokens_key, updated))
+    {:reply, MapSet.size(updated), new_state}
+  end
+
+  def handle_call({:token_count, gateway_id}, _from, state) do
+    tokens_key = {:gateway_tokens, gateway_id}
+    count = state.nodes |> Map.get(tokens_key, MapSet.new()) |> MapSet.size()
+    {:reply, count, state}
+  end
+
+  def handle_call({:clear_tokens, gateway_id}, _from, state) do
+    tokens_key = {:gateway_tokens, gateway_id}
+    {:reply, :ok, update_in(state.nodes, &Map.delete(&1, tokens_key))}
+  end
+
+  def handle_call({:record_activated_paths, gateway_id, flow_ids}, _from, state) do
+    key = {:gateway_activated_paths, gateway_id}
+    {:reply, :ok, update_in(state.nodes, &Map.put(&1, key, flow_ids))}
+  end
+
+  def handle_call({:get_activated_paths, gateway_id}, _from, state) do
+    key = {:gateway_activated_paths, gateway_id}
+    {:reply, Map.get(state.nodes, key), state}
+  end
+
+  def handle_call({:clear_activated_paths, gateway_id}, _from, state) do
+    key = {:gateway_activated_paths, gateway_id}
+    {:reply, :ok, update_in(state.nodes, &Map.delete(&1, key))}
+  end
+
+  def handle_call({:swap_process, new_process}, _from, state) do
+    {:reply, state.process, %{state | process: new_process}}
+  end
+
+  def handle_call(:get_state, _from, state) do
+    {:reply, state, state}
+  end
+
+  def handle_call({:record_visit, entry}, _from, state) do
+    {:reply, :ok, %{state | history: state.history ++ [entry]}}
+  end
+
+  def handle_call({:record_completion, node_id, token_id, result_type}, _from, state) do
+    history =
+      state.history
+      |> Enum.reverse()
+      |> update_first_match(node_id, token_id, result_type)
+      |> Enum.reverse()
+
+    {:reply, :ok, %{state | history: history}}
+  end
+
+  def handle_call(:get_history, _from, state) do
+    {:reply, state.history, state}
+  end
+
+  def handle_call({:get_node_history, node_id}, _from, state) do
+    filtered = Enum.filter(state.history, &(&1.node_id == node_id))
+    {:reply, filtered, state}
+  end
+
+  defp update_first_match([], _node_id, _token_id, _result_type), do: []
+
+  defp update_first_match([entry | rest], node_id, token_id, result_type) do
+    if entry.node_id == node_id and entry.token_id == token_id and
+         not Map.has_key?(entry, :result) do
+      [Map.put(entry, :result, result_type) | rest]
+    else
+      [entry | update_first_match(rest, node_id, token_id, result_type)]
+    end
   end
 end

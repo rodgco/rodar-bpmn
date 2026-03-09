@@ -59,8 +59,24 @@ defmodule Bpmn.Activity.Subprocess.Embedded do
         Bpmn.Context.put_meta(context, id, %{active: false, completed: true, type: :subprocess})
         Bpmn.release_token(outgoing, context)
 
-      error ->
-        error
+      {:error, _} = error ->
+        case find_error_boundary(old_process, id) do
+          nil ->
+            error
+
+          {:bpmn_event_boundary, %{outgoing: boundary_outgoing}} ->
+            Bpmn.Context.put_meta(context, id, %{
+              active: false,
+              completed: false,
+              type: :subprocess,
+              error: true
+            })
+
+            Bpmn.release_token(boundary_outgoing, context)
+        end
+
+      other ->
+        other
     end
   end
 
@@ -69,5 +85,20 @@ defmodule Bpmn.Activity.Subprocess.Embedded do
       {_id, {:bpmn_event_start, _} = elem} -> elem
       _ -> nil
     end)
+  end
+
+  defp find_error_boundary(process, subprocess_id) do
+    Enum.find_value(process, fn
+      {_id,
+       {:bpmn_event_boundary, %{attachedToRef: ^subprocess_id, definitions: definitions}} = elem} ->
+        if has_error_definition?(definitions), do: elem
+
+      _ ->
+        nil
+    end)
+  end
+
+  defp has_error_definition?(definitions) do
+    Enum.any?(definitions, &match?({:error_event_definition, _}, &1))
   end
 end

@@ -52,7 +52,7 @@ defmodule Bpmn do
   @typedoc "A BPMN element represented as a tagged tuple with a map of attributes"
   @type element :: {atom(), map()}
 
-  @typedoc "A BPMN execution context (Agent pid)"
+  @typedoc "A BPMN execution context (GenServer pid)"
   @type context :: pid()
 
   @typedoc "Result of executing a BPMN element"
@@ -101,65 +101,136 @@ defmodule Bpmn do
   end
 
   @doc """
+  Release token to another target node, threading a `Bpmn.Token` through execution.
+
+  When `targets` is a list (parallel fork), creates child tokens via `Bpmn.Token.fork/1`
+  for each branch.
+  """
+  @spec release_token(String.t() | [String.t()], context(), Bpmn.Token.t()) :: result()
+  def release_token(targets, context, %Bpmn.Token{} = token) when is_list(targets) do
+    targets
+    |> Task.async_stream(fn target ->
+      child_token = Bpmn.Token.fork(token)
+      release_token(target, context, child_token)
+    end)
+    |> Enum.reduce({:ok, context}, &reduce_result/2)
+  end
+
+  def release_token(target, context, %Bpmn.Token{} = token) do
+    process = Bpmn.Context.get(context, :process)
+    next = next(target, process)
+
+    case next do
+      nil -> {:error, "Unable to find node '#{target}'"}
+      _ -> execute(next, context, token)
+    end
+  end
+
+  @doc """
   Execute a node in the process
   """
   @spec execute(element(), context()) :: result()
-  def execute({:bpmn_event_start, _} = elem, context),
+  def execute(elem, context) do
+    token = Bpmn.Token.new()
+    execute(elem, context, token)
+  end
+
+  @doc """
+  Execute a node in the process with token tracking.
+
+  Updates the token's `current_node` before dispatching to the handler,
+  stores the token on the context, and records execution history.
+  """
+  @spec execute(element(), context(), Bpmn.Token.t()) :: result()
+  def execute({type, %{id: id} = _attrs} = elem, context, %Bpmn.Token{} = token) do
+    token = %{token | current_node: id}
+    Bpmn.Context.put_meta(context, :current_token, token)
+
+    Bpmn.Context.record_visit(context, %{
+      node_id: id,
+      token_id: token.id,
+      node_type: type,
+      timestamp: System.monotonic_time(:millisecond)
+    })
+
+    result = dispatch(elem, context)
+
+    result_type =
+      case result do
+        {:ok, _} -> :ok
+        {:error, _} -> :error
+        {:manual, _} -> :manual
+        {:fatal, _} -> :fatal
+        {:not_implemented} -> :not_implemented
+        _ -> :unknown
+      end
+
+    Bpmn.Context.record_completion(context, id, token.id, result_type)
+
+    result
+  end
+
+  # Elements without :id (e.g., bare sequence flows in some paths) skip history recording
+  def execute(elem, context, %Bpmn.Token{} = token) do
+    Bpmn.Context.put_meta(context, :current_token, token)
+    dispatch(elem, context)
+  end
+
+  defp dispatch({:bpmn_event_start, _} = elem, context),
     do: Bpmn.Event.Start.token_in(elem, context)
 
-  def execute({:bpmn_event_end, _} = elem, context), do: Bpmn.Event.End.token_in(elem, context)
+  defp dispatch({:bpmn_event_end, _} = elem, context),
+    do: Bpmn.Event.End.token_in(elem, context)
 
-  def execute({:bpmn_event_intermediate, _} = elem, context),
+  defp dispatch({:bpmn_event_intermediate, _} = elem, context),
     do: Bpmn.Event.Intermediate.token_in(elem, context)
 
-  def execute({:bpmn_event_boundary, _} = elem, context),
+  defp dispatch({:bpmn_event_boundary, _} = elem, context),
     do: Bpmn.Event.Boundary.token_in(elem, context)
 
-  def execute({:bpmn_activity_task_user, _} = elem, context),
+  defp dispatch({:bpmn_activity_task_user, _} = elem, context),
     do: Bpmn.Activity.Task.User.token_in(elem, context)
 
-  def execute({:bpmn_activity_task_script, _} = elem, context),
+  defp dispatch({:bpmn_activity_task_script, _} = elem, context),
     do: Bpmn.Activity.Task.Script.token_in(elem, context)
 
-  def execute({:bpmn_activity_task_service, _} = elem, context),
+  defp dispatch({:bpmn_activity_task_service, _} = elem, context),
     do: Bpmn.Activity.Task.Service.token_in(elem, context)
 
-  def execute({:bpmn_activity_task_manual, _} = elem, context),
+  defp dispatch({:bpmn_activity_task_manual, _} = elem, context),
     do: Bpmn.Activity.Task.Manual.token_in(elem, context)
 
-  def execute({:bpmn_activity_task_send, _} = elem, context),
+  defp dispatch({:bpmn_activity_task_send, _} = elem, context),
     do: Bpmn.Activity.Task.Send.token_in(elem, context)
 
-  def execute({:bpmn_activity_task_receive, _} = elem, context),
+  defp dispatch({:bpmn_activity_task_receive, _} = elem, context),
     do: Bpmn.Activity.Task.Receive.token_in(elem, context)
 
-  def execute({:bpmn_activity_subprocess, _} = elem, context),
+  defp dispatch({:bpmn_activity_subprocess, _} = elem, context),
     do: Bpmn.Activity.Subprocess.token_in(elem, context)
 
-  def execute({:bpmn_activity_subprocess_embeded, _} = elem, context),
+  defp dispatch({:bpmn_activity_subprocess_embeded, _} = elem, context),
     do: Bpmn.Activity.Subprocess.Embedded.token_in(elem, context)
 
-  def execute({:bpmn_gateway_exclusive, _} = elem, context),
+  defp dispatch({:bpmn_gateway_exclusive, _} = elem, context),
     do: Bpmn.Gateway.Exclusive.token_in(elem, context)
 
-  def execute({:bpmn_gateway_exclusive_event, _} = elem, context),
+  defp dispatch({:bpmn_gateway_exclusive_event, _} = elem, context),
     do: Bpmn.Gateway.Exclusive.Event.token_in(elem, context)
 
-  def execute({:bpmn_gateway_parallel, _} = elem, context),
+  defp dispatch({:bpmn_gateway_parallel, _} = elem, context),
     do: Bpmn.Gateway.Parallel.token_in(elem, context)
 
-  def execute({:bpmn_gateway_inclusive, _} = elem, context),
+  defp dispatch({:bpmn_gateway_inclusive, _} = elem, context),
     do: Bpmn.Gateway.Inclusive.token_in(elem, context)
 
-  def execute({:bpmn_gateway_complex, _} = elem, context),
+  defp dispatch({:bpmn_gateway_complex, _} = elem, context),
     do: Bpmn.Gateway.Complex.token_in(elem, context)
 
-  def execute({:bpmn_sequence_flow, _} = elem, context),
+  defp dispatch({:bpmn_sequence_flow, _} = elem, context),
     do: Bpmn.SequenceFlow.token_in(elem, context)
 
-  def execute(_elem, _, _) do
-    nil
-  end
+  defp dispatch(_elem, _context), do: nil
 
   defp reduce_result({:ok, {:ok, _} = result}, {:ok, _}), do: result
   defp reduce_result({:ok, {:error, _} = result}, {:ok, _}), do: result
