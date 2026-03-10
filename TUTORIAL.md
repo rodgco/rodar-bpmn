@@ -34,7 +34,7 @@ Then fetch and compile:
 mix deps.get && mix compile
 ```
 
-The OTP application starts automatically — `Bpmn.Application` launches a supervisor tree that includes `Bpmn.ProcessRegistry` (for process definition lookup), `Bpmn.EventRegistry` (pub/sub for the event bus), `Bpmn.Registry` (process definition storage), `Bpmn.ContextSupervisor` and `Bpmn.ProcessSupervisor` (dynamic supervisors for process instances), and `Bpmn.Port.Supervisor` (for the Node.js port used by script tasks).
+The OTP application starts automatically — `Bpmn.Application` launches a supervisor tree that includes `Bpmn.ProcessRegistry` (for process definition lookup), `Bpmn.EventRegistry` (pub/sub for the event bus), `Bpmn.Registry` (process definition storage), `Bpmn.ContextSupervisor` and `Bpmn.ProcessSupervisor` (dynamic supervisors for process instances), .
 
 ## Loading a BPMN Diagram
 
@@ -104,7 +104,7 @@ A sequence flow with a condition:
   name: "NO",
   sourceRef: "ExclusiveGateway_1eglp8f",
   targetRef: "EndEvent_1s3wrav",
-  conditionExpression: {:bpmn_condition_expression, %{expression: "!Boolean(data.user)"}},
+  conditionExpression: {:bpmn_expression, {"elixir", "data[\"user\"] == nil"}},
   isImmediate: nil
 }}
 ```
@@ -263,39 +263,37 @@ Bpmn.Expression.execute({:bpmn_expression, {"elixir", "1==2"}}, context)
 # => {:ok, false}
 ```
 
-Internally, the expression string is wrapped in an anonymous function that receives `data` (the context's data map) and evaluated with `Code.eval_string/1`. This means any valid Elixir expression that references `data` will work.
+Internally, the expression string is parsed into an AST via `Code.string_to_quoted/1`, checked against an allowlist of safe operations by `Bpmn.Expression.Sandbox`, and then evaluated with `Code.eval_quoted/2`. Only allowed operations (comparisons, boolean logic, math, string ops, data access, collections, and control flow) are permitted — dangerous calls like `System`, `File`, `IO`, `Code`, and `Process` are rejected before evaluation.
 
 ### How Exclusive Gateways Route Tokens
 
 In the `user_login.bpmn` example, the exclusive gateway has two outgoing sequence flows with conditions:
 
-- `SequenceFlow_1keu1zs` (NO): `!Boolean(data.user)` — routes to error end event
-- `SequenceFlow_0v8qyt9` (YES): `Boolean(data.user)` — routes to token generation
+- `SequenceFlow_1keu1zs` (NO): `data["user"] == nil` — routes to error end event
+- `SequenceFlow_0v8qyt9` (YES): `data["user"] != nil` — routes to token generation
 
 When `Bpmn.SequenceFlow.token_in/2` receives a flow with a condition, it evaluates the expression. If `{:ok, true}`, execution continues to the target. If `{:ok, false}`, it returns `{false}` and that path is skipped.
 
 The **Exclusive Gateway** evaluates conditions on outgoing flows and routes the token to the first match (or default flow). The **Inclusive Gateway** evaluates all outgoing flows and releases tokens to every flow whose condition is true, then synchronizes at the join using activated-path tracking. The **Parallel Gateway** releases tokens to all outgoing flows and waits for all incoming tokens at the join.
 
-## Script Tasks and the Node.js Port
+## Script Tasks
 
-### Script Task Execution
-
-`Bpmn.Activity.Task.Script` handles script tasks. When a script task has `outputs`, `type`, and `script` attributes, it delegates JavaScript execution to the Node.js port. For other script tasks, it returns `{:not_implemented}`.
-
-### The Node.js Port GenServer
-
-`Bpmn.Port.Nodejs` is a GenServer that communicates with a Node.js process via Erlang ports:
+`Bpmn.Activity.Task.Script` handles script tasks. When a script task has `type: "elixir"` and a `script` attribute, it evaluates the script using `Bpmn.Expression.Sandbox` with the context data available as the `data` variable. Only Elixir is supported as a script language.
 
 ```elixir
-# Evaluate a JavaScript string
-Bpmn.Port.Nodejs.eval_string("1+1", %{some: "context"})
-# => %{"context" => %{"some" => "context"}, "script" => "1+1", "type" => "string"}
+# Script tasks have access to context data
+elem = {:bpmn_activity_task_script, %{
+  id: "task",
+  outgoing: ["flow_out"],
+  type: "elixir",
+  script: ~S|data["count"] * 2|
+}}
 
-# Execute a JavaScript file
-Bpmn.Port.Nodejs.eval_script("path/to/script.js", %{some: "context"})
+Bpmn.Activity.Task.Script.token_in(elem, context)
+# Result is stored in context under :script_result (or custom :output_variable)
 ```
 
-Communication happens over JSON (using Jason for encoding/decoding). The Node.js process receives a JSON payload with `type` (`"string"` or `"file"`), `script`, and `context`, then returns the result as JSON.
+The sandbox prevents dangerous operations — calls to `System`, `File`, `IO`, `Code`, `Process`, etc. are rejected before evaluation.
 
 ## Putting It All Together
 
@@ -367,7 +365,7 @@ Bpmn.execute(start, ctx)
 - `Bpmn.Event.Boundary` — Error (activated by parent), message/signal/escalation (subscribe to event bus), timer (scheduled callback)
 
 **Tasks:**
-- `Bpmn.Activity.Task.Script` — Elixir and JavaScript execution (via Node.js port)
+- `Bpmn.Activity.Task.Script` — Elixir script execution (via sandboxed AST evaluator)
 - `Bpmn.Activity.Task.User` — Pauses execution, returns `{:manual, task_data}`, `resume/3` to continue
 - `Bpmn.Activity.Task.Service` — Invokes a handler module implementing `Bpmn.Activity.Task.Service.Handler`
 - `Bpmn.Activity.Task.Manual` — Pauses execution like User Task, type `:manual_task`

@@ -44,7 +44,7 @@ Implement the stub modules to support real process execution.
 
 ### Tasks
 
-- [x] **Script Task** — Complete the implementation. Execute the script via `Bpmn.Port.Nodejs`, write results back to the context, and release the token to outgoing flows.
+- [x] **Script Task** — Complete the implementation. Execute the script via sandboxed Elixir evaluator, write results back to the context, and release the token to outgoing flows.
 - [x] **Service Task** — Define a behaviour/callback module that users implement. The engine invokes it, passing context data, and writes results back.
 - [x] **User Task** — Pause execution and return `{:manual, task_data}`. Provide a `resume/3` API to continue execution after external input is received.
 - [x] **Send Task** — Emit a message into the event system.
@@ -86,9 +86,12 @@ Add publish/subscribe infrastructure for BPMN events.
 
 Replace the current `Code.eval_string` approach with something safe and extensible.
 
-- [ ] **Sandboxed expression evaluator** — Remove `Code.eval_string` (arbitrary code execution risk). Options: a restricted Elixir subset parser, a FEEL (Friendly Enough Expression Language) implementation per BPMN spec, or a simple expression DSL.
-- [ ] **Multi-language support** — The expression module already accepts a language parameter (`"elixir"`). Add support for `"feel"` (BPMN standard) and `"javascript"` (via the Node.js port).
-- [ ] **Expression testing utilities** — Helper functions to test expressions against sample data without running a full process.
+- [x] **Sandboxed expression evaluator** — `Bpmn.Expression.Sandbox` — AST-restricted Elixir evaluator. Parses via `Code.string_to_quoted`, walks AST against allowlist, evaluates safe expressions via `Code.eval_quoted`. Rejects dangerous module calls (System, File, IO, Code, Process, Port, Node).
+- [x] **Parser format fix** — `Bpmn.Engine.Diagram` now emits `{:bpmn_expression, {lang, expr}}` directly (was `{:bpmn_condition_expression, %{...}}`). Backward compat maintained in `Bpmn.Expression`.
+- [x] **Remove Node.js port** — Deleted `Bpmn.Port.Nodejs`, `Bpmn.Port.Supervisor`, and `priv/scripts/node.js`. Only Elixir expressions are supported.
+- [x] **BPMN example expressions** — Rewrote JavaScript expressions in example BPMN files to Elixir equivalents.
+- [x] **Expression testing utilities** — `Bpmn.Expression.TestHelpers` with `eval_expression/2` and `validate/1`.
+- [ ] **Multi-language support** — Add support for `"feel"` (BPMN standard) expression language.
 
 ## Phase 7: Persistence and Long-Running Processes
 
@@ -106,7 +109,7 @@ Make the engine observable and operable in production.
 - [ ] **Telemetry integration** — Emit `:telemetry` events for node execution start/stop/error, process start/complete, token creation/consumption.
 - [ ] **Structured logging** — Add consistent log metadata (process ID, instance ID, node ID, token ID) to all log messages.
 - [ ] **Dashboard data** — Expose APIs to query running instances, token positions, waiting tasks, and execution history.
-- [ ] **Health checks** — Report on Node.js port status, supervisor tree health, and pending timer count.
+- [ ] **Health checks** — Report on supervisor tree health and pending timer count.
 
 ## Phase 9: BPMN Compliance and Validation
 

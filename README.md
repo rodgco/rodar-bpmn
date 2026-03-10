@@ -160,7 +160,7 @@ end
 
 | Element | Status | Notes |
 |---------|--------|-------|
-| Script Task | Implemented | Elixir and JavaScript (via Node.js port) |
+| Script Task | Implemented | Elixir (sandboxed AST evaluation) |
 | User Task | Implemented | Pause/resume with `{:manual, task_data}` |
 | Service Task | Implemented | Handler behaviour callback |
 | Send Task | Implemented | Publishes to event bus if `messageRef` present |
@@ -188,11 +188,11 @@ The engine uses a **token-based execution model**. A `Bpmn.Token` struct tracks 
 - **`Bpmn.Context`** — GenServer-based state management (process data, node metadata, gateway token tracking, execution history).
 - **`Bpmn.Registry`** — Process definition registry using Elixir's `Registry` module. Register, lookup, and manage BPMN process definitions.
 - **`Bpmn.Process`** — Process lifecycle GenServer. Create instances, activate, suspend, resume, terminate. Tracks status transitions.
-- **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows.
+- **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows using the sandboxed evaluator.
+- **`Bpmn.Expression.Sandbox`** — AST-restricted Elixir expression evaluator (replaces `Code.eval_string`).
 - **`Bpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`.
 - **`Bpmn.Event.Bus`** — Registry-based pub/sub for BPMN events (message, signal, escalation).
 - **`Bpmn.Event.Timer`** — ISO 8601 duration parsing and timer scheduling.
-- **`Bpmn.Port.Nodejs`** — GenServer managing a Node.js child process for JavaScript evaluation.
 
 ### Supervision Tree
 
@@ -202,8 +202,7 @@ Bpmn.Supervisor (one_for_one)
 ├── Bpmn.EventRegistry (Elixir Registry, :duplicate keys — event bus pub/sub)
 ├── Bpmn.Registry (GenServer for process definitions)
 ├── Bpmn.ContextSupervisor (DynamicSupervisor for context processes)
-├── Bpmn.ProcessSupervisor (DynamicSupervisor for process instances)
-└── Bpmn.Port.Supervisor (Node.js port management)
+└── Bpmn.ProcessSupervisor (DynamicSupervisor for process instances)
 ```
 
 ## Development
