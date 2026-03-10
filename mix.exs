@@ -1,7 +1,7 @@
 defmodule RodarBpmn.MixProject do
   use Mix.Project
 
-  @version "0.1.0-dev"
+  @version "VERSION" |> File.read!() |> String.trim()
 
   def project do
     [
@@ -27,7 +27,7 @@ defmodule RodarBpmn.MixProject do
   defp package do
     [
       name: "rodar_bpmn",
-      files: ["lib", "mix.exs", "README*", "LICENSE*"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG.md", "VERSION"],
       maintainers: ["Cosmin Harangus"],
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/Around25/rodar-bpmn"}
@@ -69,6 +69,7 @@ defmodule RodarBpmn.MixProject do
         "DEVELOPER.md",
         "CONTRIBUTING.md",
         "CODE_OF_CONDUCT.md",
+        "CHANGELOG.md",
         "guides/getting_started.md",
         "guides/process_lifecycle.md",
         "guides/events.md",
