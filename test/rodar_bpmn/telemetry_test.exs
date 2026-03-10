@@ -195,10 +195,14 @@ defmodule RodarBpmn.TelemetryTest do
       # Drain token events first
       drain_events([:rodar_bpmn, :token, :create])
 
-      assert_received {:telemetry_event, [:rodar_bpmn, :process, :start], %{system_time: _}, meta}
+      assert_receive {:telemetry_event, [:rodar_bpmn, :process, :start], %{system_time: _}, meta},
+                     500
+
       assert meta.process_id == process_id
 
-      assert_received {:telemetry_event, [:rodar_bpmn, :process, :stop], %{duration: _}, meta}
+      assert_receive {:telemetry_event, [:rodar_bpmn, :process, :stop], %{duration: _}, meta},
+                     500
+
       assert meta.process_id == process_id
 
       RodarBpmn.Process.terminate(pid)

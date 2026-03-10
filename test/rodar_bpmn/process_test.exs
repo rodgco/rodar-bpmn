@@ -204,7 +204,7 @@ defmodule RodarBpmn.ProcessTest do
       Application.put_env(:rodar_bpmn, :validate_on_activate, true)
 
       on_exit(fn ->
-        Application.delete_env(:bpmn, :validate_on_activate)
+        Application.delete_env(:rodar_bpmn, :validate_on_activate)
       end)
     end
 

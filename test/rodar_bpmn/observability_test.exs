@@ -3,7 +3,7 @@ defmodule RodarBpmn.ObservabilityTest do
 
   setup do
     # Ensure supervision tree is fully started
-    _ = Application.ensure_all_started(:bpmn)
+    _ = Application.ensure_all_started(:rodar_bpmn)
     :ok
   end
 
