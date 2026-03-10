@@ -16,7 +16,7 @@ If you're familiar with OTP but new to BPMN, here are the core concepts:
 
 ## Current Status
 
-This library is at version `0.1.0-dev` targeting Elixir ~> 1.16 with OTP 27+. The following are fully implemented: start events, end events (plain, error, terminate), intermediate throw/catch events (message, signal, escalation, timer), boundary events (error, message, signal, timer, escalation), sequence flows with condition expressions, exclusive/parallel/inclusive/complex/event-based gateways, script/user/service/manual/send/receive tasks, embedded subprocesses (with error boundary event propagation), call activities (external process lookup via registry), token-based execution tracking, process registry, process lifecycle management, context supervision, execution history, and a Registry-based event bus for pub/sub messaging.
+This library is at version `0.1.0-dev` targeting Elixir ~> 1.16 with OTP 27+. The following are fully implemented: start events, end events (plain, error, terminate), intermediate throw/catch events (message, signal, escalation, timer), boundary events (error, message, signal, timer, escalation), sequence flows with condition expressions, exclusive/parallel/inclusive/complex/event-based gateways, script/user/service/manual/send/receive tasks, embedded subprocesses (with error boundary event propagation), call activities (external process lookup via registry), token-based execution tracking, process registry, process lifecycle management, context supervision, execution history, a Registry-based event bus for pub/sub messaging, persistence (serialization, ETS adapter, dehydrate/rehydrate), telemetry instrumentation, structured logging, and observability APIs (dashboard queries and health checks).
 
 ## Setup
 
@@ -34,7 +34,7 @@ Then fetch and compile:
 mix deps.get && mix compile
 ```
 
-The OTP application starts automatically — `Bpmn.Application` launches a supervisor tree that includes `Bpmn.ProcessRegistry` (for process definition lookup), `Bpmn.EventRegistry` (pub/sub for the event bus), `Bpmn.Registry` (process definition storage), `Bpmn.ContextSupervisor` and `Bpmn.ProcessSupervisor` (dynamic supervisors for process instances), .
+The OTP application starts automatically — `Bpmn.Application` launches a supervisor tree that includes `Bpmn.ProcessRegistry` (for process definition lookup), `Bpmn.EventRegistry` (pub/sub for the event bus), `Bpmn.Registry` (process definition storage), `Bpmn.ContextSupervisor` and `Bpmn.ProcessSupervisor` (dynamic supervisors for process instances), and conditionally a persistence adapter if configured.
 
 ## Loading a BPMN Diagram
 
@@ -384,6 +384,16 @@ Bpmn.execute(start, ctx)
 - `Bpmn.Activity.Subprocess` — Call activity; looks up external process from `Bpmn.Registry`, executes in child context, merges data back
 - `Bpmn.Activity.Subprocess.Embedded` — Executes nested elements within parent context; error boundary event propagation
 
+**Persistence:**
+- `Bpmn.Persistence` — Behaviour + facade for storage adapters (`save/2`, `load/1`, `delete/1`, `list/0`)
+- `Bpmn.Persistence.Serializer` — Converts live state to persistable snapshots and back
+- `Bpmn.Persistence.Adapter.ETS` — ETS-based adapter for development and testing
+
+**Observability:**
+- `Bpmn.Telemetry` — Telemetry event definitions and helpers; `node_span/2` uses `:telemetry.span/3`
+- `Bpmn.Telemetry.LogHandler` — Default handler converting telemetry events to structured Logger output
+- `Bpmn.Observability` — Read-only query APIs: `running_instances/0`, `waiting_instances/0`, `execution_history/1`, `health/0`
+
 ## Event Bus Usage
 
 The event bus enables automated communication between BPMN nodes:
@@ -414,5 +424,60 @@ Bpmn.Event.Bus.unsubscribe(:signal, "system_alert")
 ```
 
 Send tasks with `messageRef` automatically publish, and receive tasks with `messageRef` automatically subscribe. Intermediate throw events publish and intermediate catch events subscribe. Boundary events subscribe for message/signal/escalation and schedule timers.
+
+## Telemetry and Observability
+
+The engine emits `:telemetry` events at key execution points, enabling monitoring, metrics collection, and debugging.
+
+### Attaching a Telemetry Handler
+
+```elixir
+# Use the built-in log handler for structured logging
+Bpmn.Telemetry.LogHandler.attach()
+
+# Or attach a custom handler
+:telemetry.attach_many(
+  "my-metrics",
+  Bpmn.Telemetry.events(),
+  fn event, measurements, metadata, _config ->
+    # Send to your metrics backend
+    MyMetrics.record(event, measurements, metadata)
+  end,
+  nil
+)
+```
+
+The log handler logs at appropriate levels: node start/stop at `debug`, exceptions at `error`, and process start/stop at `info`. Detach it with `Bpmn.Telemetry.LogHandler.detach/0`.
+
+### Querying Engine State
+
+`Bpmn.Observability` provides read-only APIs for operational visibility:
+
+```elixir
+# List all process instances with their status
+Bpmn.Observability.running_instances()
+# => [%{pid: #PID<0.250.0>, instance_id: "abc-123", status: :suspended}]
+
+# Filter to just the ones waiting for external input
+Bpmn.Observability.waiting_instances()
+
+# Get execution history for a specific process
+Bpmn.Observability.execution_history(pid)
+# => [%{node_id: "start_1", token_id: "...", node_type: :bpmn_event_start, ...}]
+
+# Health check — supervisor status, counts, subscriptions
+Bpmn.Observability.health()
+# => %{supervisor_alive: true, process_count: 1, context_count: 1,
+#       registry_definitions: 2, event_subscriptions: 3}
+```
+
+### Structured Logger Metadata
+
+Logger metadata is automatically set during execution so all log messages within a BPMN execution context include:
+
+- `bpmn_node_id`, `bpmn_node_type`, `bpmn_token_id` — set by `Bpmn.execute/3`
+- `bpmn_instance_id`, `bpmn_process_id` — set by `Bpmn.Process` on init
+
+This works with any Logger backend that outputs metadata (e.g., JSON formatters for log aggregation).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on extending the library.

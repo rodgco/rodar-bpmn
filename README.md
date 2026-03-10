@@ -11,11 +11,12 @@ A BPMN 2.0 execution engine for Elixir. Parses BPMN 2.0 XML diagrams and execute
 2. [Usage](#usage)
 3. [Supported BPMN Elements](#supported-bpmn-elements)
 4. [Architecture](#architecture)
-5. [Development](#development)
-6. [Contributing](CONTRIBUTING.md)
-7. [Code of Conduct](CODE_OF_CONDUCT.md)
-8. [License](#license)
-9. [References](#references)
+5. [Observability](#observability)
+6. [Development](#development)
+7. [Contributing](CONTRIBUTING.md)
+8. [Code of Conduct](CODE_OF_CONDUCT.md)
+9. [License](#license)
+10. [References](#references)
 
 ## Installation
 
@@ -176,6 +177,8 @@ end
 | Embedded Subprocess | Implemented | Executes nested elements within parent context; error boundary event propagation |
 | Event Bus | Implemented | Registry-based pub/sub for message (point-to-point), signal/escalation (broadcast) |
 | Timer | Implemented | ISO 8601 duration parsing (`PT5S`, `PT1H30M`), `Process.send_after` scheduling |
+| Telemetry | Implemented | `:telemetry` events for node execution, process lifecycle, token creation, event bus |
+| Observability | Implemented | Query APIs for running/waiting instances, execution history, health checks |
 
 ## Architecture
 
@@ -193,6 +196,9 @@ The engine uses a **token-based execution model**. A `Bpmn.Token` struct tracks 
 - **`Bpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`.
 - **`Bpmn.Event.Bus`** — Registry-based pub/sub for BPMN events (message, signal, escalation).
 - **`Bpmn.Event.Timer`** — ISO 8601 duration parsing and timer scheduling.
+- **`Bpmn.Telemetry`** — Telemetry event definitions and helpers; wraps node execution with `:telemetry.span/3`.
+- **`Bpmn.Telemetry.LogHandler`** — Default handler that converts telemetry events to structured `Logger` output.
+- **`Bpmn.Observability`** — Read-only query APIs for running instances, waiting tasks, execution history, and health checks.
 
 ### Supervision Tree
 
@@ -204,6 +210,59 @@ Bpmn.Supervisor (one_for_one)
 ├── Bpmn.ContextSupervisor (DynamicSupervisor for context processes)
 └── Bpmn.ProcessSupervisor (DynamicSupervisor for process instances)
 ```
+
+## Observability
+
+### Telemetry Events
+
+The engine emits `:telemetry` events for all key operations. Attach your own handlers or use the built-in log handler:
+
+```elixir
+# Attach the default log handler
+Bpmn.Telemetry.LogHandler.attach()
+
+# Or attach a custom handler to specific events
+:telemetry.attach_many("my-handler", Bpmn.Telemetry.events(), &MyHandler.handle/4, nil)
+```
+
+Events emitted:
+
+| Event | Measurements | Metadata |
+|-------|-------------|----------|
+| `[:bpmn, :node, :start]` | `system_time` | `node_id`, `node_type`, `token_id` |
+| `[:bpmn, :node, :stop]` | `duration` | `node_id`, `node_type`, `token_id`, `result` |
+| `[:bpmn, :node, :exception]` | `duration` | `node_id`, `node_type`, `token_id`, `kind`, `reason` |
+| `[:bpmn, :process, :start]` | `system_time` | `instance_id`, `process_id` |
+| `[:bpmn, :process, :stop]` | `duration` | `instance_id`, `process_id`, `status` |
+| `[:bpmn, :token, :create]` | `system_time` | `token_id`, `parent_id`, `node_id` |
+| `[:bpmn, :event_bus, :publish]` | `system_time` | `event_type`, `event_name`, `subscriber_count` |
+| `[:bpmn, :event_bus, :subscribe]` | `system_time` | `event_type`, `event_name`, `node_id` |
+
+### Dashboard Queries
+
+```elixir
+# List all running process instances
+Bpmn.Observability.running_instances()
+# => [%{pid: #PID<0.123.0>, instance_id: "abc-123", status: :suspended}, ...]
+
+# List only suspended (waiting) instances
+Bpmn.Observability.waiting_instances()
+
+# Get execution history for a process
+Bpmn.Observability.execution_history(pid)
+
+# Health check
+Bpmn.Observability.health()
+# => %{supervisor_alive: true, process_count: 3, context_count: 3,
+#       registry_definitions: 2, event_subscriptions: 5}
+```
+
+### Structured Logging
+
+Logger metadata is automatically set during execution:
+
+- `bpmn_node_id`, `bpmn_node_type`, `bpmn_token_id` — set in `Bpmn.execute/3`
+- `bpmn_instance_id`, `bpmn_process_id` — set in `Bpmn.Process` init
 
 ## Development
 

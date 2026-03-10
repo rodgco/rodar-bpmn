@@ -107,10 +107,10 @@ Support processes that span hours, days, or weeks.
 
 Make the engine observable and operable in production.
 
-- [ ] **Telemetry integration** — Emit `:telemetry` events for node execution start/stop/error, process start/complete, token creation/consumption.
-- [ ] **Structured logging** — Add consistent log metadata (process ID, instance ID, node ID, token ID) to all log messages.
-- [ ] **Dashboard data** — Expose APIs to query running instances, token positions, waiting tasks, and execution history.
-- [ ] **Health checks** — Report on supervisor tree health and pending timer count.
+- [x] **Telemetry integration** — `Bpmn.Telemetry` centralizes 8 event definitions with typed helpers. `node_span/2` uses `:telemetry.span/3` for timed node execution. Token creation, process lifecycle, and event bus publish/subscribe all emit telemetry events.
+- [x] **Structured logging** — `Logger.metadata` in `execute/3` (node_id, node_type, token_id) and `Bpmn.Process.init` (instance_id, process_id). `Bpmn.Telemetry.LogHandler` provides a default handler converting telemetry to structured log output.
+- [x] **Dashboard data** — `Bpmn.Observability` exposes `running_instances/0`, `waiting_instances/0`, and `execution_history/1` by querying existing supervisors and registries.
+- [x] **Health checks** — `Bpmn.Observability.health/0` reports supervisor_alive, process_count, context_count, registry_definitions, and event_subscriptions.
 
 ## Phase 9: BPMN Compliance and Validation
 

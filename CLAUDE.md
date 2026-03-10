@@ -45,6 +45,9 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 - **`Bpmn.Persistence`** — Behaviour defining adapter callbacks (`save/2`, `load/1`, `delete/1`, `list/0`) and facade delegating to the configured adapter. Reads config from `Application.get_env(:bpmn, :persistence)`.
 - **`Bpmn.Persistence.Serializer`** — Converts live process state to persistable snapshots and back. Handles MapSets (→ sorted lists), timer refs (stripped), Token structs (→ plain maps). Uses `:erlang.term_to_binary`/`binary_to_term` for binary serialization.
 - **`Bpmn.Persistence.Adapter.ETS`** — GenServer owning a named ETS table (`:bpmn_persistence`). Implements `Bpmn.Persistence` behaviour. Suitable for development/testing.
+- **`Bpmn.Telemetry`** — Centralizes telemetry event definitions and helpers. `events/0` returns all event names, `node_span/2` wraps dispatch with `:telemetry.span/3`, plus typed emit functions for token, process, and event bus events.
+- **`Bpmn.Telemetry.LogHandler`** — Default telemetry handler that logs events via `Logger`. `attach/0`/`detach/0` to manage lifecycle. Node start/stop at debug, exception at error, process start/stop at info.
+- **`Bpmn.Observability`** — Read-only query APIs: `running_instances/0`, `waiting_instances/0`, `execution_history/1`, `health/0`. Queries existing supervisors and registries.
 
 ### Supervision Tree
 
@@ -57,6 +60,8 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 - `lib/bpmn/gateway/` — Exclusive, parallel, inclusive, complex, event-based gateways
 - `lib/bpmn/expression/` — Sandboxed expression evaluator and test helpers
 - `lib/bpmn/persistence/` — Persistence behaviour, serializer, and adapters (ETS)
+- `lib/bpmn/telemetry/` — Telemetry event definitions, helpers, and default log handler
+- `lib/bpmn/observability.ex` — Dashboard query APIs and health checks
 
 ### Testing Conventions
 
