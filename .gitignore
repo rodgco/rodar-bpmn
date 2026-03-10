@@ -21,3 +21,6 @@ erl_crash.dump
 .idea/
 *.iml
 
+# Hex docs local cache
+/.hex-docs/
+
