@@ -159,12 +159,13 @@ end
 | End Event (error) | Implemented | Sets error state in context |
 | End Event (terminate) | Implemented | Marks process as terminated |
 | Intermediate Throw Event | Implemented | Publishes message/signal/escalation to event bus |
-| Intermediate Catch Event | Implemented | Subscribes to event bus; returns `{:manual, _}` |
+| Intermediate Catch Event | Implemented | Subscribes to event bus or conditional evaluation; returns `{:manual, _}` |
 | Boundary Event (error) | Implemented | Activated by parent activity on error |
 | Boundary Event (message) | Implemented | Subscribes to event bus |
 | Boundary Event (signal) | Implemented | Subscribes to event bus |
 | Boundary Event (timer) | Implemented | Schedules via `Process.send_after` |
 | Boundary Event (escalation) | Implemented | Subscribes to event bus |
+| Boundary Event (conditional) | Implemented | Subscribes to context data changes; fires when condition becomes true |
 | Boundary Event (compensate) | Implemented | Passive — handler registration in dispatcher |
 | Intermediate Throw (compensate) | Implemented | Triggers compensation; supports `activityRef` and `waitForCompletion` |
 | End Event (compensate) | Implemented | Triggers compensation on process end |

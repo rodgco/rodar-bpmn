@@ -208,6 +208,24 @@ defmodule Bpmn.Context do
     GenServer.call(context, {:restore_state, new_state})
   end
 
+  @doc """
+  Subscribe to condition evaluation on data changes.
+  When any `put_data` call makes the condition expression evaluate to true,
+  the context sends a `{:condition_met, ...}` message to itself.
+  """
+  @spec subscribe_condition(pid(), String.t(), String.t(), map()) :: :ok
+  def subscribe_condition(context, subscription_id, condition_expr, metadata) do
+    GenServer.call(context, {:subscribe_condition, subscription_id, condition_expr, metadata})
+  end
+
+  @doc """
+  Remove a conditional subscription.
+  """
+  @spec unsubscribe_condition(pid(), String.t()) :: :ok
+  def unsubscribe_condition(context, subscription_id) do
+    GenServer.call(context, {:unsubscribe_condition, subscription_id})
+  end
+
   # --- GenServer Callbacks ---
 
   @impl true
@@ -218,7 +236,8 @@ defmodule Bpmn.Context do
        data: %{},
        process: process,
        nodes: %{},
-       history: []
+       history: [],
+       conditional_subscriptions: %{}
      }}
   end
 
@@ -228,7 +247,9 @@ defmodule Bpmn.Context do
   end
 
   def handle_call({:put_data, key, value}, _from, state) do
-    {:reply, :ok, update_in(state.data, &Map.put(&1, key, value))}
+    new_state = update_in(state.data, &Map.put(&1, key, value))
+    evaluate_conditions(new_state)
+    {:reply, :ok, new_state}
   end
 
   def handle_call({:get_data, key}, _from, state) do
@@ -320,7 +341,31 @@ defmodule Bpmn.Context do
     {:reply, filtered, state}
   end
 
+  def handle_call({:subscribe_condition, sub_id, condition_expr, metadata}, _from, state) do
+    subs =
+      Map.put(state.conditional_subscriptions, sub_id, %{
+        condition: condition_expr,
+        metadata: metadata
+      })
+
+    {:reply, :ok, %{state | conditional_subscriptions: subs}}
+  end
+
+  def handle_call({:unsubscribe_condition, sub_id}, _from, state) do
+    subs = Map.delete(state.conditional_subscriptions, sub_id)
+    {:reply, :ok, %{state | conditional_subscriptions: subs}}
+  end
+
   @impl true
+  def handle_info({:condition_met, node_id, outgoing}, state) do
+    nodes = Map.put(state.nodes, node_id, %{active: false, completed: true, type: :catch_event})
+    subs = Map.delete(state.conditional_subscriptions, node_id)
+    new_state = %{state | nodes: nodes, conditional_subscriptions: subs}
+    context = self()
+    spawn(fn -> Bpmn.release_token(outgoing, context) end)
+    {:noreply, new_state}
+  end
+
   def handle_info({:timer_fired, node_id, outgoing}, state) do
     nodes = Map.put(state.nodes, node_id, %{active: false, completed: true, type: :catch_event})
     new_state = %{state | nodes: nodes}
@@ -363,6 +408,21 @@ defmodule Bpmn.Context do
     new_state = %{state | nodes: nodes}
     spawn(fn -> Bpmn.release_token(outgoing, context) end)
     {:noreply, new_state}
+  end
+
+  defp evaluate_conditions(state) do
+    context = self()
+
+    Enum.each(state.conditional_subscriptions, fn {sub_id, %{condition: expr, metadata: meta}} ->
+      case Bpmn.Expression.Sandbox.eval(expr, %{"data" => state.data}) do
+        {:ok, true} ->
+          outgoing = Map.get(meta, :outgoing, [])
+          send(context, {:condition_met, sub_id, outgoing})
+
+        _ ->
+          :ok
+      end
+    end)
   end
 
   defp update_first_match([], _node_id, _token_id, _result_type), do: []

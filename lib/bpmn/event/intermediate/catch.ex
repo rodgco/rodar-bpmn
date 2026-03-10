@@ -31,6 +31,9 @@ defmodule Bpmn.Event.Intermediate.Catch do
       has_timer?(attrs) ->
         handle_timer(id, attrs, outgoing, context)
 
+      has_conditional?(attrs) ->
+        handle_conditional(id, attrs, outgoing, context)
+
       true ->
         {:error, "Catch event '#{id}': unsupported event definition"}
     end
@@ -60,6 +63,10 @@ defmodule Bpmn.Event.Intermediate.Catch do
 
   defp has_timer?(attrs) do
     match?({:bpmn_event_definition_timer, _}, Map.get(attrs, :timerEventDefinition))
+  end
+
+  defp has_conditional?(attrs) do
+    match?({:bpmn_event_definition_conditional, _}, Map.get(attrs, :conditionalEventDefinition))
   end
 
   defp subscribe_message(id, attrs, outgoing, context) do
@@ -143,6 +150,54 @@ defmodule Bpmn.Event.Intermediate.Catch do
 
   defp schedule_duration_timer(id, _other, outgoing, context) do
     {:manual, %{id: id, type: :timer_catch, outgoing: outgoing, context: context}}
+  end
+
+  defp handle_conditional(id, attrs, outgoing, context) do
+    {:bpmn_event_definition_conditional, def_attrs} = attrs.conditionalEventDefinition
+    condition = Map.get(def_attrs, :condition)
+
+    if is_nil(condition) do
+      {:error, "Catch event '#{id}': conditional event has no condition expression"}
+    else
+      handle_conditional_expr(id, condition, outgoing, context)
+    end
+  end
+
+  defp handle_conditional_expr(id, condition, outgoing, context) do
+    data = Bpmn.Context.get(context, :data)
+
+    case Bpmn.Expression.Sandbox.eval(condition, %{"data" => data}) do
+      {:ok, true} ->
+        Bpmn.Context.put_meta(context, id, %{
+          active: false,
+          completed: true,
+          type: :catch_event
+        })
+
+        Bpmn.release_token(outgoing, context)
+
+      _ ->
+        Bpmn.Context.put_meta(context, id, %{
+          active: true,
+          completed: false,
+          type: :catch_event
+        })
+
+        Bpmn.Context.subscribe_condition(context, id, condition, %{
+          node_id: id,
+          outgoing: outgoing,
+          context: context
+        })
+
+        {:manual,
+         %{
+           id: id,
+           type: :conditional_catch,
+           condition: condition,
+           outgoing: outgoing,
+           context: context
+         }}
+    end
   end
 
   defp schedule_cycle_timer(id, cycle_expr, outgoing, context) do

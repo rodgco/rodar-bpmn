@@ -77,7 +77,7 @@ Add publish/subscribe infrastructure for BPMN events.
 - [x] **Signal events** — Broadcast signals to all waiting catch events and boundary events.
 - [x] **Timer events** — `Bpmn.Event.Timer` — ISO 8601 duration parsing, `Process.send_after/3` scheduling. Context handles `{:timer_fired, ...}` via `handle_info`.
 - [x] **Escalation events** — Broadcast escalations to subscribing boundary events.
-- [ ] **Conditional events** — Re-evaluate conditions when context data changes.
+- [x] **Conditional events** — Re-evaluate conditions when context data changes. Parser extracts `condition` from `conditionalEventDefinition`. Context manages conditional subscriptions, evaluates on `put_data`. Supported in intermediate catch and boundary events.
 - [ ] **Message correlation keys** — Advanced routing beyond name matching.
 - [x] **Timer cycle parsing** — ISO 8601 repeating intervals (`R3/PT10S`, `R/PT1M`, bare duration). Parser extracts `timeDuration`, `timeCycle`, `timeDate` from XML sub-elements.
 - [x] **Signal/message-triggered start events** — `Bpmn.Event.Start.Trigger` auto-creates process instances when a matching message or signal is published. Subscribes to event bus, spawns `Bpmn.Process.create_and_run/2` with event payload as init data. Re-subscribes for messages (point-to-point consumed).

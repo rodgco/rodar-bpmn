@@ -46,6 +46,9 @@ defmodule Bpmn.Event.Boundary do
       has_escalation?(attrs) ->
         handle_escalation_boundary(id, attrs, outgoing, context)
 
+      has_conditional?(attrs) ->
+        handle_conditional_boundary(id, attrs, outgoing, context)
+
       has_compensate?(attrs) ->
         # Compensation boundary events are passive — handler registration
         # happens in Bpmn.execute/3 when the attached activity completes
@@ -74,6 +77,10 @@ defmodule Bpmn.Event.Boundary do
 
   defp has_escalation?(attrs) do
     match?({:bpmn_event_definition_escalation, _}, Map.get(attrs, :escalationEventDefinition))
+  end
+
+  defp has_conditional?(attrs) do
+    match?({:bpmn_event_definition_conditional, _}, Map.get(attrs, :conditionalEventDefinition))
   end
 
   defp has_compensate?(attrs) do
@@ -173,6 +180,29 @@ defmodule Bpmn.Event.Boundary do
 
       {:error, reason} ->
         {:error, "Boundary event '#{id}': invalid timer cycle — #{reason}"}
+    end
+  end
+
+  defp handle_conditional_boundary(id, attrs, outgoing, context) do
+    {:bpmn_event_definition_conditional, def_attrs} = attrs.conditionalEventDefinition
+    condition = Map.get(def_attrs, :condition)
+
+    if is_nil(condition) do
+      {:error, "Boundary event '#{id}': conditional event has no condition expression"}
+    else
+      Bpmn.Context.put_meta(context, id, %{
+        active: true,
+        completed: false,
+        type: :boundary_event
+      })
+
+      Bpmn.Context.subscribe_condition(context, id, condition, %{
+        node_id: id,
+        outgoing: outgoing,
+        context: context
+      })
+
+      {:manual, %{id: id, type: :conditional_boundary, condition: condition, context: context}}
     end
   end
 

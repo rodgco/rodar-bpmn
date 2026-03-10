@@ -345,8 +345,15 @@ defmodule Bpmn.Engine.Diagram do
   defp load_element("bpmn2:task", attrs, elems),
     do: {:bpmn_activity_task, Map.merge(attrs, %{_elems: elems})}
 
-  defp load_element("bpmn2:conditionalEventDefinition", attrs, elems),
-    do: {:bpmn_event_definition_conditional, Map.merge(attrs, %{_elems: elems})}
+  defp load_element("bpmn2:conditionalEventDefinition", attrs, elems) do
+    condition =
+      Enum.find_value(elems, fn
+        {"bpmn2:condition", _, [value]} -> to_string(value)
+        _ -> nil
+      end)
+
+    {:bpmn_event_definition_conditional, Map.merge(attrs, %{condition: condition, _elems: elems})}
+  end
 
   defp load_element("bpmn2:compensateEventDefinition", attrs, elems),
     do: {:bpmn_event_definition_compensate, Map.merge(attrs, %{_elems: elems})}
