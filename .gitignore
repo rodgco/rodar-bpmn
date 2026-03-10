@@ -24,3 +24,6 @@ erl_crash.dump
 # Hex docs local cache
 /.hex-docs/
 
+# Claude Code local settings
+.claude/
+
