@@ -56,6 +56,7 @@ defmodule Bpmn.MixProject do
       {:excoveralls, "~> 0.18", only: [:dev, :test], runtime: false},
       {:jason, "~> 1.4"},
       {:erlsom, "~> 1.5"},
+      {:nimble_parsec, "~> 1.4"},
       {:telemetry, "~> 1.2"}
     ]
   end
@@ -113,6 +114,10 @@ defmodule Bpmn.MixProject do
           Bpmn.Engine.Diagram,
           Bpmn.Expression,
           Bpmn.Expression.Sandbox,
+          Bpmn.Expression.Feel,
+          Bpmn.Expression.Feel.Parser,
+          Bpmn.Expression.Feel.Evaluator,
+          Bpmn.Expression.Feel.Functions,
           Bpmn.Validation,
           Bpmn.Collaboration,
           Bpmn.SequenceFlow

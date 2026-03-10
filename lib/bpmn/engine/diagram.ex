@@ -346,13 +346,29 @@ defmodule Bpmn.Engine.Diagram do
     do: {:bpmn_activity_task, Map.merge(attrs, %{_elems: elems})}
 
   defp load_element("bpmn2:conditionalEventDefinition", attrs, elems) do
-    condition =
-      Enum.find_value(elems, fn
-        {"bpmn2:condition", _, [value]} -> to_string(value)
-        _ -> nil
+    {condition, condition_language} =
+      Enum.find_value(elems, {nil, "elixir"}, fn
+        {"bpmn2:condition", cond_attrs, [value]} ->
+          lang =
+            cond_attrs
+            |> format_attributes()
+            |> Map.get(:language, "elixir")
+            |> to_string()
+
+          {to_string(value), lang}
+
+        _ ->
+          nil
       end)
 
-    {:bpmn_event_definition_conditional, Map.merge(attrs, %{condition: condition, _elems: elems})}
+    merged =
+      Map.merge(attrs, %{
+        condition: condition,
+        condition_language: condition_language,
+        _elems: elems
+      })
+
+    {:bpmn_event_definition_conditional, merged}
   end
 
   defp load_element("bpmn2:compensateEventDefinition", attrs, elems),

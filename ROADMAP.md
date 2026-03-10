@@ -91,7 +91,7 @@ Replace the current `Code.eval_string` approach with something safe and extensib
 - [x] **Remove Node.js port** — Deleted `Bpmn.Port.Nodejs`, `Bpmn.Port.Supervisor`, and `priv/scripts/node.js`. Only Elixir expressions are supported.
 - [x] **BPMN example expressions** — Rewrote JavaScript expressions in example BPMN files to Elixir equivalents.
 - [x] **Expression testing utilities** — `Bpmn.Expression.TestHelpers` with `eval_expression/2` and `validate/1`.
-- [ ] **Multi-language support** — Add support for `"feel"` (BPMN standard) expression language.
+- [x] **Multi-language support** — FEEL (Friendly Enough Expression Language) support via `Bpmn.Expression.Feel`.
 
 ## Phase 7: Persistence and Long-Running Processes
 

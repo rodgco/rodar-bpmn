@@ -210,7 +210,7 @@ end
 
 | Element | Status | Notes |
 |---------|--------|-------|
-| Script Task | Implemented | Elixir (sandboxed AST evaluation) |
+| Script Task | Implemented | Elixir (sandboxed AST evaluation), FEEL |
 | User Task | Implemented | Pause/resume with `{:manual, task_data}` |
 | Service Task | Implemented | Handler behaviour callback |
 | Send Task | Implemented | Publishes to event bus if `messageRef` present |
@@ -221,7 +221,7 @@ end
 
 | Element | Status | Notes |
 |---------|--------|-------|
-| Sequence Flow | Implemented | Conditional expressions supported |
+| Sequence Flow | Implemented | Conditional expressions supported (Elixir + FEEL) |
 | Call Activity (Subprocess) | Implemented | Looks up external process from registry, executes in child context |
 | Embedded Subprocess | Implemented | Executes nested elements within parent context; error boundary event propagation |
 | Event Bus | Implemented | Registry-based pub/sub for message (point-to-point with correlation keys), signal/escalation (broadcast) |
@@ -288,8 +288,9 @@ The engine uses a **token-based execution model**. A `Bpmn.Token` struct tracks 
 - **`Bpmn.Context`** — GenServer-based state management (process data, node metadata, gateway token tracking, execution history).
 - **`Bpmn.Registry`** — Process definition registry using Elixir's `Registry` module. Register, lookup, and manage BPMN process definitions.
 - **`Bpmn.Process`** — Process lifecycle GenServer. Create instances, activate, suspend, resume, terminate. Tracks status transitions.
-- **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows using the sandboxed evaluator.
+- **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows. Routes to the Elixir sandbox or FEEL evaluator based on language.
 - **`Bpmn.Expression.Sandbox`** — AST-restricted Elixir expression evaluator (replaces `Code.eval_string`).
+- **`Bpmn.Expression.Feel`** — FEEL (Friendly Enough Expression Language) evaluator. NimbleParsec-based parser with null propagation, three-valued boolean logic, and built-in functions.
 - **`Bpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`.
 - **`Bpmn.Event.Bus`** — Registry-based pub/sub for BPMN events (message, signal, escalation).
 - **`Bpmn.Event.Timer`** — ISO 8601 duration parsing and timer scheduling.
