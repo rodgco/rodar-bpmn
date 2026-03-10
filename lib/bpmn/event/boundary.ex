@@ -189,20 +189,18 @@ defmodule Bpmn.Event.Boundary do
   defp handle_conditional_boundary(id, attrs, outgoing, context) do
     {:bpmn_event_definition_conditional, def_attrs} = attrs.conditionalEventDefinition
     condition = Map.get(def_attrs, :condition)
+    language = Map.get(def_attrs, :condition_language, "elixir")
 
     if is_nil(condition) do
       {:error, "Boundary event '#{id}': conditional event has no condition expression"}
     else
-      Context.put_meta(context, id, %{
-        active: true,
-        completed: false,
-        type: :boundary_event
-      })
+      Context.put_meta(context, id, %{active: true, completed: false, type: :boundary_event})
 
       Context.subscribe_condition(context, id, condition, %{
         node_id: id,
         outgoing: outgoing,
-        context: context
+        context: context,
+        condition_language: language
       })
 
       {:manual, %{id: id, type: :conditional_boundary, condition: condition, context: context}}

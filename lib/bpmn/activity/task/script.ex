@@ -6,8 +6,8 @@ defmodule Bpmn.Activity.Task.Script do
   and content come from the element's attributes. Results are written back
   to the context under the task's output variable(s).
 
-  Uses `Bpmn.Expression.Sandbox` for safe evaluation — arbitrary code
-  execution is prevented by AST restriction. Only Elixir scripts are supported.
+  Supports `"elixir"` scripts (sandboxed AST evaluation) and `"feel"` scripts
+  (FEEL expression language).
 
   ## Examples
 
@@ -23,6 +23,7 @@ defmodule Bpmn.Activity.Task.Script do
   """
 
   alias Bpmn.Context
+  alias Bpmn.Expression.Feel
   alias Bpmn.Expression.Sandbox
 
   @doc """
@@ -64,7 +65,15 @@ defmodule Bpmn.Activity.Task.Script do
     Sandbox.eval(script, %{"data" => data})
   end
 
+  defp run_script("feel", {:bpmn_script, %{expression: script}}, data) do
+    Feel.eval(script, data)
+  end
+
+  defp run_script("feel", script, data) when is_binary(script) do
+    Feel.eval(script, data)
+  end
+
   defp run_script(lang, _script, _data) do
-    {:error, "Unsupported script language: #{lang}. Only Elixir is supported."}
+    {:error, "Unsupported script language: #{lang}. Only Elixir and FEEL are supported."}
   end
 end

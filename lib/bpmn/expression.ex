@@ -5,8 +5,10 @@ defmodule Bpmn.Expression do
 
   Validate a Bpmn condition expression and return its value.
 
-  Uses `Bpmn.Expression.Sandbox` for safe evaluation — arbitrary code
-  execution is prevented by AST restriction.
+  Supports multiple expression languages:
+
+  - `"elixir"` — Sandboxed Elixir expression evaluation via `Bpmn.Expression.Sandbox`
+  - `"feel"` — FEEL (Friendly Enough Expression Language) via `Bpmn.Expression.Feel`
 
     iex> {:ok, context} = Bpmn.Context.start_link(%{}, %{})
     iex> Bpmn.Expression.execute({:bpmn_expression, {"elixir", "1==2"}}, context)
@@ -23,8 +25,16 @@ defmodule Bpmn.Expression do
     iex> Bpmn.Expression.execute({:bpmn_expression, {"elixir", "data[\\"count\\"]==4"}}, context)
     {:ok, true}
 
+    FEEL expressions receive the raw data map — identifiers resolve directly:
+
+    iex> {:ok, context} = Bpmn.Context.start_link(%{}, %{})
+    iex> Bpmn.Context.put_data(context, "count", 4)
+    iex> Bpmn.Expression.execute({:bpmn_expression, {"feel", "count = 4"}}, context)
+    {:ok, true}
+
   """
 
+  alias Bpmn.Expression.Feel
   alias Bpmn.Expression.Sandbox
 
   @doc """
@@ -45,7 +55,9 @@ defmodule Bpmn.Expression do
   end
 
   @doc """
-  Evaluate an elixir expression within the given context using the sandbox.
+  Evaluate an expression within the given context using the appropriate evaluator.
+
+  Supports `"elixir"` (via Sandbox) and `"feel"` (via FEEL evaluator).
   """
   @spec evaluate(String.t(), String.t(), Bpmn.context()) :: term()
   def evaluate("elixir", expr, context) do
@@ -57,7 +69,16 @@ defmodule Bpmn.Expression do
     end
   end
 
+  def evaluate("feel", expr, context) do
+    data = Bpmn.Context.get(context, :data)
+
+    case Feel.eval(expr, data) do
+      {:ok, result} -> result
+      {:error, reason} -> raise "FEEL expression error: #{reason}"
+    end
+  end
+
   def evaluate(lang, _expr, _context) do
-    raise "Unsupported expression language: #{lang}. Only \"elixir\" is supported."
+    raise ~s|Unsupported expression language: #{lang}. Only "elixir" and "feel" are supported.|
   end
 end

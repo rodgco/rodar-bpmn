@@ -20,6 +20,7 @@ defmodule Bpmn.Context do
   use GenServer
 
   alias Bpmn.Event.Timer
+  alias Bpmn.Expression.Feel
   alias Bpmn.Expression.Sandbox
 
   # --- Client API ---
@@ -417,7 +418,9 @@ defmodule Bpmn.Context do
     context = self()
 
     Enum.each(state.conditional_subscriptions, fn {sub_id, %{condition: expr, metadata: meta}} ->
-      case Sandbox.eval(expr, %{"data" => state.data}) do
+      result = eval_subscription_condition(expr, meta, state)
+
+      case result do
         {:ok, true} ->
           outgoing = Map.get(meta, :outgoing, [])
           send(context, {:condition_met, sub_id, outgoing})
@@ -426,6 +429,13 @@ defmodule Bpmn.Context do
           :ok
       end
     end)
+  end
+
+  defp eval_subscription_condition(expr, meta, state) do
+    case Map.get(meta, :condition_language, "elixir") do
+      "feel" -> Feel.eval(expr, state.data)
+      _ -> Sandbox.eval(expr, %{"data" => state.data})
+    end
   end
 
   defp update_first_match([], _node_id, _token_id, _result_type), do: []

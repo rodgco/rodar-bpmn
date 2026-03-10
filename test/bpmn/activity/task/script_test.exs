@@ -98,7 +98,7 @@ defmodule Bpmn.Activity.Task.ScriptTest do
         {:bpmn_activity_task_script,
          %{id: "task", outgoing: ["flow_out"], type: "python", script: "print(1)"}}
 
-      assert {:error, "Unsupported script language: python. Only Elixir is supported."} =
+      assert {:error, "Unsupported script language: python. Only Elixir and FEEL are supported."} =
                Script.token_in(elem, context)
     end
 
@@ -110,7 +110,8 @@ defmodule Bpmn.Activity.Task.ScriptTest do
         {:bpmn_activity_task_script,
          %{id: "task", outgoing: ["flow_out"], type: "javascript", script: "1+1"}}
 
-      assert {:error, "Unsupported script language: javascript. Only Elixir is supported."} =
+      assert {:error,
+              "Unsupported script language: javascript. Only Elixir and FEEL are supported."} =
                Script.token_in(elem, context)
     end
   end

@@ -19,6 +19,7 @@ defmodule Bpmn.Event.Intermediate.Catch do
   alias Bpmn.Context
   alias Bpmn.Event.Bus
   alias Bpmn.Event.Timer
+  alias Bpmn.Expression.Feel
   alias Bpmn.Expression.Sandbox
 
   @doc """
@@ -159,38 +160,31 @@ defmodule Bpmn.Event.Intermediate.Catch do
   defp handle_conditional(id, attrs, outgoing, context) do
     {:bpmn_event_definition_conditional, def_attrs} = attrs.conditionalEventDefinition
     condition = Map.get(def_attrs, :condition)
+    language = Map.get(def_attrs, :condition_language, "elixir")
 
     if is_nil(condition) do
       {:error, "Catch event '#{id}': conditional event has no condition expression"}
     else
-      handle_conditional_expr(id, condition, outgoing, context)
+      handle_conditional_expr(id, condition, language, outgoing, context)
     end
   end
 
-  defp handle_conditional_expr(id, condition, outgoing, context) do
-    data = Context.get(context, :data)
+  defp handle_conditional_expr(id, condition, language, outgoing, context) do
+    result = eval_condition(language, condition, context)
 
-    case Sandbox.eval(condition, %{"data" => data}) do
+    case result do
       {:ok, true} ->
-        Context.put_meta(context, id, %{
-          active: false,
-          completed: true,
-          type: :catch_event
-        })
-
+        Context.put_meta(context, id, %{active: false, completed: true, type: :catch_event})
         Bpmn.release_token(outgoing, context)
 
       _ ->
-        Context.put_meta(context, id, %{
-          active: true,
-          completed: false,
-          type: :catch_event
-        })
+        Context.put_meta(context, id, %{active: true, completed: false, type: :catch_event})
 
         Context.subscribe_condition(context, id, condition, %{
           node_id: id,
           outgoing: outgoing,
-          context: context
+          context: context,
+          condition_language: language
         })
 
         {:manual,
@@ -202,6 +196,16 @@ defmodule Bpmn.Event.Intermediate.Catch do
            context: context
          }}
     end
+  end
+
+  defp eval_condition("feel", condition, context) do
+    data = Context.get(context, :data)
+    Feel.eval(condition, data)
+  end
+
+  defp eval_condition(_lang, condition, context) do
+    data = Context.get(context, :data)
+    Sandbox.eval(condition, %{"data" => data})
   end
 
   defp put_correlation(metadata, def_attrs, context) do

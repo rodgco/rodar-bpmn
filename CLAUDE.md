@@ -42,8 +42,12 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 - **`Bpmn.Event.Intermediate.Catch`** — Subscribes to event bus, schedules timer, or subscribes to conditional evaluation; returns `{:manual, _}`. Fires immediately if condition is already true. Has `resume/3`.
 - **`Bpmn.Event.Boundary`** — Full implementation: error (direct activation), message/signal/escalation (event bus), timer (scheduled), conditional (context subscription, fires on data change), compensate (passive — registration in dispatcher).
 - **`Bpmn.Compensation`** — Tracks completed activities and their compensation handlers. `register_handler/3`, `compensate_activity/2` (targeted), `compensate_all/1` (reverse order), `remove_handlers/2` (cleanup on failure). Pre-registered in `Bpmn.execute/3` for activities with compensation boundary events.
-- **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows using the sandbox evaluator. Accepts both `{:bpmn_expression, {lang, expr}}` and legacy `{:bpmn_condition_expression, %{...}}` formats.
+- **`Bpmn.Expression`** — Evaluates condition expressions on sequence flows. Routes to `"elixir"` (Sandbox) or `"feel"` (FEEL) evaluator based on language tag. Accepts both `{:bpmn_expression, {lang, expr}}` and legacy `{:bpmn_condition_expression, %{...}}` formats.
 - **`Bpmn.Expression.Sandbox`** — AST-restricted Elixir expression evaluator. Parses via `Code.string_to_quoted`, walks AST against an allowlist, evaluates safe expressions via `Code.eval_quoted`. Prevents arbitrary code execution.
+- **`Bpmn.Expression.Feel`** — FEEL (Friendly Enough Expression Language) facade. Parses and evaluates FEEL expressions via `eval/2`. FEEL bindings receive the raw data map directly (users write `count > 5`, not `data["count"] > 5`).
+- **`Bpmn.Expression.Feel.Parser`** — NimbleParsec-based FEEL parser producing AST tuples. Supports arithmetic, comparisons, boolean operators, paths, bracket access, if-then-else, in operator (list/range), function calls (including space-separated names like `string length`), and list literals.
+- **`Bpmn.Expression.Feel.Evaluator`** — Tree-walking evaluator for FEEL AST. Implements null propagation, three-valued boolean logic, string concatenation via `+`, and path resolution in nested maps.
+- **`Bpmn.Expression.Feel.Functions`** — Built-in FEEL functions: numeric (`abs`, `floor`, `ceiling`, `round`, `min`, `max`, `sum`, `count`), string (`string length`, `contains`, `starts with`, `ends with`, `upper case`, `lower case`, `substring`), boolean (`not`), null (`is null`). Null propagation for all except `is null` and `not`.
 - **`Bpmn.Expression.TestHelpers`** — Convenience functions for evaluating expressions against sample data without a full process context, and for validating expression safety.
 - **`Bpmn.Validation`** — Structural validation for parsed process maps. `validate/1` returns accumulated `{:ok, map} | {:error, [issue]}`. `validate!/1` raises. `validate_collaboration/2` checks participant refs and message flow refs. 9 rules covering start/end events, sequence flow refs, orphan nodes, gateway outgoing, exclusive gateway defaults, boundary attachment.
 - **`Bpmn.Collaboration`** — Multi-participant orchestration. `start/2` registers processes, creates instances, wires message flows via event bus, activates all. `stop/1` terminates all instances. Uses existing `Bpmn.Event.Bus` for inter-process messaging.
@@ -68,7 +72,7 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 - `lib/bpmn/activity/` — Tasks (user, script, service, send, receive, manual) and subprocesses (embedded, call activity)
 - `lib/bpmn/event/` — Start, end, intermediate (throw/catch), boundary events, event bus, timer utilities
 - `lib/bpmn/gateway/` — Exclusive, parallel, inclusive, complex, event-based gateways
-- `lib/bpmn/expression/` — Sandboxed expression evaluator and test helpers
+- `lib/bpmn/expression/` — Sandboxed Elixir evaluator, FEEL evaluator (`feel/` subdirectory), and test helpers
 - `lib/bpmn/persistence/` — Persistence behaviour, serializer, and adapters (ETS)
 - `lib/bpmn/telemetry/` — Telemetry event definitions, helpers, and default log handler
 - `lib/bpmn/observability.ex` — Dashboard query APIs and health checks
