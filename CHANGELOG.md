@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI workflow with Dialyzer, Credo, and test coverage
 
 ### Changed
-- Forked from [hashiru-bpmn](https://github.com/Around25/bpmn) by Around25
+- Forked from [hashiru-bpmn](https://github.com/Around25/bpmn) by [Around25](https://around25.com)
 - Modernized for Elixir 1.16+ and OTP 27
 - Adopted Elixir snake_case naming conventions throughout
 - Renamed package from `bpmn` to `rodar_bpmn`

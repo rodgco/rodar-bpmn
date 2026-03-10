@@ -19,7 +19,22 @@ mix docs                                           # Generate documentation
 mix rodar_bpmn.validate <file>                           # Validate a BPMN file
 mix rodar_bpmn.inspect <file>                            # Inspect parsed structure
 mix rodar_bpmn.run <file> [--data '{}']                  # Execute a process
+mix rodar_bpmn.release <patch|minor|major>               # Create a release
+mix rodar_bpmn.release patch --dry-run                   # Preview release
 ```
+
+## Versioning
+
+The project follows [Semantic Versioning](https://semver.org/). The single source of truth for the current version is the `VERSION` file at the project root, read by `mix.exs` at compile time. Development versions use a `-dev` suffix (e.g., `0.1.0-dev`).
+
+**Release workflow** (`mix rodar_bpmn.release <bump>`):
+1. Strips `-dev` from VERSION to get the release version
+2. Updates CHANGELOG.md with the release date
+3. Commits and tags `v{version}`
+4. Bumps VERSION to the next dev version based on bump type
+5. Commits the new dev version
+
+**Changelog**: `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/) format. All notable changes go under `## [Unreleased]` during development. The release task promotes unreleased entries to a versioned section.
 
 ## Architecture
 

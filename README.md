@@ -18,10 +18,11 @@ A BPMN 2.0 execution engine for Elixir. Parses BPMN 2.0 XML diagrams and execute
 9. [Observability](#observability)
 10. [CLI Tools](#cli-tools)
 11. [Development](#development)
-12. [Contributing](CONTRIBUTING.md)
-13. [Code of Conduct](CODE_OF_CONDUCT.md)
-14. [License](#license)
-15. [References](#references)
+12. [Versioning & Releases](#versioning--releases)
+13. [Contributing](CONTRIBUTING.md)
+14. [Code of Conduct](CODE_OF_CONDUCT.md)
+15. [License](#license)
+16. [References](#references)
 
 ## Installation
 
@@ -439,6 +440,17 @@ mix rodar_bpmn.run path/to/process.bpmn
 mix rodar_bpmn.run path/to/process.bpmn --data '{"username": "alice"}'
 ```
 
+### Create a release
+
+```shell
+mix rodar_bpmn.release patch          # Release current version, bump patch
+mix rodar_bpmn.release minor          # Release current version, bump minor
+mix rodar_bpmn.release major          # Release current version, bump major
+mix rodar_bpmn.release patch --dry-run  # Preview without making changes
+```
+
+See [Versioning & Releases](#versioning--releases) for details.
+
 ## Development
 
 ```shell
@@ -469,6 +481,17 @@ Tests cover:
 - **Parse conformance** — MIWG reference files (A.1.0–B.2.0) parse correctly regardless of namespace prefix
 - **Execution patterns** — 12 standard BPMN patterns (sequential, gateways, timers, messages, signals, error boundaries, compensation, subprocesses, event-based routing)
 - **Element coverage** — Reports supported element types against the most complex MIWG reference (B.2.0)
+
+## Versioning & Releases
+
+This project follows [Semantic Versioning](https://semver.org/). The current version lives in the `VERSION` file at the project root and is read by `mix.exs` at compile time.
+
+- **Development versions** use a `-dev` suffix (e.g., `0.2.0-dev`)
+- **Releases** are created with `mix rodar_bpmn.release <patch|minor|major>`
+- **Changelog** follows [Keep a Changelog](https://keepachangelog.com/) format in `CHANGELOG.md`
+- **Git tags** use the `v{version}` format (e.g., `v0.1.0`)
+
+The release task handles the full workflow: updates VERSION and CHANGELOG, commits, tags, and bumps to the next dev version.
 
 ## Acknowledgments
 
