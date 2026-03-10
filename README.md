@@ -118,6 +118,32 @@ Bpmn.Event.Bus.publish(:signal, "system_alert", %{data: %{level: "warning"}})
 # Receive tasks auto-subscribe when messageRef is set
 ```
 
+#### Message Correlation Keys
+
+When multiple process instances wait for the same message name, correlation keys route messages to the correct instance:
+
+```elixir
+# Subscriber includes correlation metadata
+Bpmn.Event.Bus.subscribe(:message, "payment_confirmed", %{
+  context: context,
+  node_id: "catch1",
+  outgoing: ["flow_out"],
+  correlation: %{key: "order_id", value: "ORD-123"}
+})
+
+# Publisher includes matching correlation — routes to the correct subscriber
+Bpmn.Event.Bus.publish(:message, "payment_confirmed", %{
+  data: %{amount: 99},
+  correlation: %{key: "order_id", value: "ORD-123"}
+})
+```
+
+In BPMN XML, set `correlationKey` on a `messageEventDefinition` to automatically extract the correlation value from context data:
+
+```xml
+<bpmn:messageEventDefinition messageRef="payment_confirmed" correlationKey="order_id" />
+```
+
 ### Triggered Start Events
 
 Auto-create process instances when a message or signal fires:
@@ -198,7 +224,7 @@ end
 | Sequence Flow | Implemented | Conditional expressions supported |
 | Call Activity (Subprocess) | Implemented | Looks up external process from registry, executes in child context |
 | Embedded Subprocess | Implemented | Executes nested elements within parent context; error boundary event propagation |
-| Event Bus | Implemented | Registry-based pub/sub for message (point-to-point), signal/escalation (broadcast) |
+| Event Bus | Implemented | Registry-based pub/sub for message (point-to-point with correlation keys), signal/escalation (broadcast) |
 | Compensation | Implemented | Tracks completed activities; executes handlers in reverse order via `Bpmn.Compensation` |
 | Triggered Start Events | Implemented | Auto-create process instances on matching message/signal via `Bpmn.Event.Start.Trigger` |
 | Timer | Implemented | ISO 8601 duration (`PT5S`, `PT1H30M`) and cycle parsing (`R3/PT10S`, `R/PT1M`), `Process.send_after` scheduling |

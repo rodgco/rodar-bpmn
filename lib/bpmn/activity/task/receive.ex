@@ -43,11 +43,9 @@ defmodule Bpmn.Activity.Task.Receive do
         :ok
 
       message_ref ->
-        Bpmn.Event.Bus.subscribe(:message, message_ref, %{
-          context: context,
-          node_id: id,
-          outgoing: outgoing
-        })
+        metadata = %{context: context, node_id: id, outgoing: outgoing}
+        metadata = put_correlation(metadata, attrs, context)
+        Bpmn.Event.Bus.subscribe(:message, message_ref, metadata)
     end
 
     {:manual, task_data}
@@ -69,5 +67,16 @@ defmodule Bpmn.Activity.Task.Receive do
     Bpmn.Context.put_meta(context, id, %{active: false, completed: true, type: :receive_task})
 
     Bpmn.release_token(outgoing, context)
+  end
+
+  defp put_correlation(metadata, attrs, context) do
+    case Map.get(attrs, :correlationKey) do
+      nil ->
+        metadata
+
+      key ->
+        data = Bpmn.Context.get(context, :data)
+        Map.put(metadata, :correlation, %{key: key, value: Map.get(data, key)})
+    end
   end
 end

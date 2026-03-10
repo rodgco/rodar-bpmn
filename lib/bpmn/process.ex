@@ -17,6 +17,8 @@ defmodule Bpmn.Process do
   use GenServer
   require Logger
 
+  alias Bpmn.Event.Bus
+
   @type status :: :created | :running | :suspended | :completed | :terminated | :error
 
   # --- Client API ---
@@ -407,17 +409,17 @@ defmodule Bpmn.Process do
       match?({:bpmn_event_definition_message, _}, Map.get(attrs, :messageEventDefinition)) ->
         {:bpmn_event_definition_message, def_attrs} = attrs.messageEventDefinition
         name = Map.get(def_attrs, :messageRef, id)
-        Bpmn.Event.Bus.subscribe(:message, name, metadata)
+        Bus.subscribe(:message, name, metadata)
 
       match?({:bpmn_event_definition_signal, _}, Map.get(attrs, :signalEventDefinition)) ->
         {:bpmn_event_definition_signal, def_attrs} = attrs.signalEventDefinition
         name = Map.get(def_attrs, :signalRef, id)
-        Bpmn.Event.Bus.subscribe(:signal, name, metadata)
+        Bus.subscribe(:signal, name, metadata)
 
       match?({:bpmn_event_definition_escalation, _}, Map.get(attrs, :escalationEventDefinition)) ->
         {:bpmn_event_definition_escalation, def_attrs} = attrs.escalationEventDefinition
         name = Map.get(def_attrs, :escalationRef, id)
-        Bpmn.Event.Bus.subscribe(:escalation, name, metadata)
+        Bus.subscribe(:escalation, name, metadata)
 
       true ->
         :ok

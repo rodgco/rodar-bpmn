@@ -32,7 +32,7 @@ defmodule Bpmn.Expression do
           {:bpmn_expression, {String.t(), String.t()}}
           | {:bpmn_condition_expression, map()},
           Bpmn.context()
-        ) :: {:ok, boolean()}
+        ) :: {:ok, term()}
   def execute({:bpmn_expression, {_, ""}}, _), do: {:ok, true}
   def execute({:bpmn_expression, {lang, expr}}, context), do: {:ok, evaluate(lang, expr, context)}
 
@@ -47,9 +47,11 @@ defmodule Bpmn.Expression do
   """
   @spec evaluate(String.t(), String.t(), Bpmn.context()) :: boolean()
   def evaluate("elixir", expr, context) do
+    alias Bpmn.Expression.Sandbox
+
     data = Bpmn.Context.get(context, :data)
 
-    case Bpmn.Expression.Sandbox.eval(expr, %{"data" => data}) do
+    case Sandbox.eval(expr, %{"data" => data}) do
       {:ok, result} -> result
       {:error, reason} -> raise "Expression error: #{reason}"
     end

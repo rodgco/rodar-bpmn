@@ -62,7 +62,9 @@ defmodule Bpmn.Event.Intermediate.Throw do
     {:bpmn_event_definition_message, def_attrs} = attrs.messageEventDefinition
     message_name = Map.get(def_attrs, :messageRef, id)
     data = Bpmn.Context.get(context, :data)
-    Bpmn.Event.Bus.publish(:message, message_name, %{source: id, data: data})
+    payload = %{source: id, data: data}
+    payload = put_correlation(payload, def_attrs, context)
+    Bpmn.Event.Bus.publish(:message, message_name, payload)
   end
 
   defp publish_signal(id, attrs, context) do
@@ -95,6 +97,17 @@ defmodule Bpmn.Event.Intermediate.Throw do
     else
       run_compensation.()
       Bpmn.release_token(outgoing, context)
+    end
+  end
+
+  defp put_correlation(payload, def_attrs, context) do
+    case Map.get(def_attrs, :correlationKey) do
+      nil ->
+        payload
+
+      key ->
+        data = Bpmn.Context.get(context, :data)
+        Map.put(payload, :correlation, %{key: key, value: Map.get(data, key)})
     end
   end
 

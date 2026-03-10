@@ -75,11 +75,10 @@ defmodule Bpmn.Event.Intermediate.Catch do
 
     Bpmn.Context.put_meta(context, id, %{active: true, completed: false, type: :catch_event})
 
-    Bpmn.Event.Bus.subscribe(:message, message_name, %{
-      context: context,
-      node_id: id,
-      outgoing: outgoing
-    })
+    metadata = %{context: context, node_id: id, outgoing: outgoing}
+    metadata = put_correlation(metadata, def_attrs, context)
+
+    Bpmn.Event.Bus.subscribe(:message, message_name, metadata)
 
     {:manual,
      %{
@@ -197,6 +196,17 @@ defmodule Bpmn.Event.Intermediate.Catch do
            outgoing: outgoing,
            context: context
          }}
+    end
+  end
+
+  defp put_correlation(metadata, def_attrs, context) do
+    case Map.get(def_attrs, :correlationKey) do
+      nil ->
+        metadata
+
+      key ->
+        data = Bpmn.Context.get(context, :data)
+        Map.put(metadata, :correlation, %{key: key, value: Map.get(data, key)})
     end
   end
 

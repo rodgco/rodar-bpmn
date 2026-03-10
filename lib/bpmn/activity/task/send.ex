@@ -42,9 +42,22 @@ defmodule Bpmn.Activity.Task.Send do
 
       message_ref ->
         data = Bpmn.Context.get(context, :data)
-        Bpmn.Event.Bus.publish(:message, message_ref, %{source: id, data: data})
+        payload = %{source: id, data: data}
+        payload = put_correlation(payload, attrs, context)
+        Bpmn.Event.Bus.publish(:message, message_ref, payload)
     end
 
     Bpmn.release_token(outgoing, context)
+  end
+
+  defp put_correlation(payload, attrs, context) do
+    case Map.get(attrs, :correlationKey) do
+      nil ->
+        payload
+
+      key ->
+        data = Bpmn.Context.get(context, :data)
+        Map.put(payload, :correlation, %{key: key, value: Map.get(data, key)})
+    end
   end
 end

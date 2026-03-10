@@ -127,7 +127,19 @@ defmodule Bpmn.Collaboration do
       message_ref = extract_message_ref(attrs, target_ref)
       outgoing = Map.get(attrs, :outgoing, [])
       metadata = %{context: context, node_id: target_ref, outgoing: outgoing}
+      metadata = put_correlation(metadata, flow, context)
       Bpmn.Event.Bus.subscribe(:message, message_ref, metadata)
+    end
+  end
+
+  defp put_correlation(metadata, flow, context) do
+    case Map.get(flow, :correlationKey) do
+      nil ->
+        metadata
+
+      key ->
+        data = Bpmn.Context.get(context, :data)
+        Map.put(metadata, :correlation, %{key: key, value: Map.get(data, key)})
     end
   end
 

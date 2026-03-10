@@ -6,9 +6,28 @@ defmodule Bpmn.Event.Bus do
   different delivery semantics:
 
   - `:message` — point-to-point: delivers to the first matching subscriber
-    and unregisters it
+    and unregisters it. Supports correlation keys for routing to specific
+    subscribers when multiple instances wait for the same message name.
   - `:signal` — broadcast: delivers to all matching subscribers
   - `:escalation` — broadcast: delivers to all matching subscribers
+
+  ## Message Correlation
+
+  When multiple process instances subscribe to the same message name,
+  correlation keys route messages to the correct subscriber. Both the
+  subscriber metadata and publisher payload can include a `:correlation`
+  map with `:key` and `:value` fields:
+
+      # Subscriber metadata
+      %{correlation: %{key: "order_id", value: "ORD-123"}, ...}
+
+      # Publisher payload
+      %{correlation: %{key: "order_id", value: "ORD-123"}, ...}
+
+  If the publisher includes correlation, the bus finds the subscriber with
+  a matching correlation key/value pair. If no correlated match is found,
+  it falls back to an uncorrelated subscriber. If the publisher omits
+  correlation, existing first-match behavior applies (backward compatible).
 
   Subscribers register with metadata containing callback information
   (context pid, node_id, outgoing flows) so the bus can resume execution
@@ -81,11 +100,18 @@ defmodule Bpmn.Event.Bus do
         Bpmn.Telemetry.event_published(:message, event_name, 0)
         {:error, :no_subscriber}
 
-      [{pid, metadata} | _] ->
-        send(pid, {:bpmn_event, :message, event_name, payload, metadata})
-        Registry.unregister_match(@registry, key, metadata, [])
-        Bpmn.Telemetry.event_published(:message, event_name, 1)
-        :ok
+      subscribers ->
+        case find_correlated_subscriber(subscribers, payload) do
+          nil ->
+            Bpmn.Telemetry.event_published(:message, event_name, 0)
+            {:error, :no_subscriber}
+
+          {pid, metadata} ->
+            send(pid, {:bpmn_event, :message, event_name, payload, metadata})
+            Registry.unregister_match(@registry, key, metadata, [])
+            Bpmn.Telemetry.event_published(:message, event_name, 1)
+            :ok
+        end
     end
   end
 
@@ -135,4 +161,25 @@ defmodule Bpmn.Event.Bus do
     Registry.lookup(@registry, key)
     |> Enum.map(fn {pid, metadata} -> Map.put(metadata, :pid, pid) end)
   end
+
+  defp find_correlated_subscriber(subscribers, payload) do
+    pub_corr = Map.get(payload, :correlation)
+
+    if is_nil(pub_corr) do
+      List.first(subscribers)
+    else
+      correlated =
+        Enum.find(subscribers, fn {_pid, meta} ->
+          match_correlation?(Map.get(meta, :correlation), pub_corr)
+        end)
+
+      correlated ||
+        Enum.find(subscribers, fn {_pid, meta} ->
+          is_nil(Map.get(meta, :correlation))
+        end)
+    end
+  end
+
+  defp match_correlation?(nil, _pub), do: false
+  defp match_correlation?(sub, pub), do: sub.key == pub.key and sub.value == pub.value
 end

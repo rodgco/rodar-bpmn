@@ -77,6 +77,111 @@ defmodule Bpmn.Event.BusTest do
     end
   end
 
+  describe "publish/3 with :message type and correlation" do
+    test "matches correct subscriber among multiple by correlation key" do
+      name = "corr_msg_#{:erlang.unique_integer()}"
+
+      # Subscribe both from current process with different correlation values
+      Bpmn.Event.Bus.subscribe(:message, name, %{
+        node_id: "n1",
+        correlation: %{key: "order_id", value: "ORD-1"}
+      })
+
+      Bpmn.Event.Bus.subscribe(:message, name, %{
+        node_id: "n2",
+        correlation: %{key: "order_id", value: "ORD-2"}
+      })
+
+      # Publish with ORD-2 correlation — should reach subscriber 2 only
+      assert :ok =
+               Bpmn.Event.Bus.publish(:message, name, %{
+                 data: "payment",
+                 correlation: %{key: "order_id", value: "ORD-2"}
+               })
+
+      assert_receive {:bpmn_event, :message, ^name, %{data: "payment"}, %{node_id: "n2"}}
+
+      # Subscriber 1 should still be registered
+      subs = Bpmn.Event.Bus.subscriptions(:message, name)
+      assert length(subs) == 1
+      assert hd(subs).node_id == "n1"
+    end
+
+    test "falls back to uncorrelated subscriber when no correlation match" do
+      name = "corr_fallback_#{:erlang.unique_integer()}"
+
+      # Uncorrelated subscriber (current process)
+      Bpmn.Event.Bus.subscribe(:message, name, %{node_id: "uncorr"})
+
+      # Publish with correlation that doesn't match anyone
+      assert :ok =
+               Bpmn.Event.Bus.publish(:message, name, %{
+                 data: "hello",
+                 correlation: %{key: "order_id", value: "ORD-999"}
+               })
+
+      assert_receive {:bpmn_event, :message, ^name, _, %{node_id: "uncorr"}}
+    end
+
+    test "returns error when correlation specified but no match and no uncorrelated" do
+      name = "corr_nomatch_#{:erlang.unique_integer()}"
+      parent = self()
+
+      # Only a correlated subscriber with different value
+      spawn(fn ->
+        Bpmn.Event.Bus.subscribe(:message, name, %{
+          node_id: "n1",
+          correlation: %{key: "order_id", value: "ORD-1"}
+        })
+
+        send(parent, :ready)
+        Process.sleep(:infinity)
+      end)
+
+      receive do: (:ready -> :ok)
+
+      assert {:error, :no_subscriber} =
+               Bpmn.Event.Bus.publish(:message, name, %{
+                 correlation: %{key: "order_id", value: "ORD-999"}
+               })
+    end
+
+    test "backward compat: publish without correlation picks first subscriber" do
+      name = "corr_compat_#{:erlang.unique_integer()}"
+
+      Bpmn.Event.Bus.subscribe(:message, name, %{node_id: "first"})
+
+      assert :ok = Bpmn.Event.Bus.publish(:message, name, %{data: "no_corr"})
+      assert_receive {:bpmn_event, :message, ^name, %{data: "no_corr"}, %{node_id: "first"}}
+    end
+
+    test "mixed correlated and uncorrelated subscribers" do
+      name = "corr_mixed_#{:erlang.unique_integer()}"
+
+      # Correlated subscriber
+      Bpmn.Event.Bus.subscribe(:message, name, %{
+        node_id: "corr",
+        correlation: %{key: "id", value: "A"}
+      })
+
+      # Uncorrelated subscriber
+      Bpmn.Event.Bus.subscribe(:message, name, %{node_id: "uncorr"})
+
+      # Publish with matching correlation — should go to correlated subscriber
+      assert :ok =
+               Bpmn.Event.Bus.publish(:message, name, %{
+                 correlation: %{key: "id", value: "A"}
+               })
+
+      assert_receive {:bpmn_event, :message, ^name, _, %{node_id: "corr"}}
+
+      # Uncorrelated should still be there
+      subs = Bpmn.Event.Bus.subscriptions(:message, name)
+      assert length(subs) == 1
+      assert hd(subs).node_id == "uncorr"
+    end
+  end
+
   describe "subscriptions/2" do
     test "lists current subscribers" do
       name = "list_#{:erlang.unique_integer()}"
