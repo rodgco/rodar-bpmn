@@ -15,6 +15,7 @@ defmodule Bpmn.Process do
   """
 
   use GenServer
+  require Logger
 
   @type status :: :created | :running | :suspended | :completed | :terminated | :error
 
@@ -164,6 +165,11 @@ defmodule Bpmn.Process do
 
   @impl true
   def init({:restore, restore_data, context}) do
+    Logger.metadata(
+      bpmn_instance_id: restore_data.instance_id,
+      bpmn_process_id: restore_data.process_id
+    )
+
     {:ok,
      %{
        instance_id: restore_data.instance_id,
@@ -182,9 +188,16 @@ defmodule Bpmn.Process do
 
         case Bpmn.Context.start_supervised(process_map, init_data) do
           {:ok, context} ->
+            instance_id = generate_instance_id()
+
+            Logger.metadata(
+              bpmn_instance_id: instance_id,
+              bpmn_process_id: process_id
+            )
+
             {:ok,
              %{
-               instance_id: generate_instance_id(),
+               instance_id: instance_id,
                process_id: process_id,
                definition: {attrs, elements},
                context: context,
@@ -213,6 +226,8 @@ defmodule Bpmn.Process do
       start_event ->
         token = Bpmn.Token.new()
         state = %{state | status: :running, root_token: token}
+        start_time = System.monotonic_time()
+        Bpmn.Telemetry.process_started(state.instance_id, state.process_id)
 
         result = Bpmn.execute(start_event, state.context, token)
 
@@ -232,6 +247,13 @@ defmodule Bpmn.Process do
             _ ->
               %{state | status: :error}
           end
+
+        Bpmn.Telemetry.process_stopped(
+          state.instance_id,
+          state.process_id,
+          state.status,
+          start_time
+        )
 
         {:reply, :ok, state}
     end

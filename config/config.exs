@@ -27,6 +27,15 @@ import Config
 #
 #     import_config "#{config_env()}.exs"
 
+config :logger, :default_formatter,
+  metadata: [
+    :bpmn_node_id,
+    :bpmn_node_type,
+    :bpmn_token_id,
+    :bpmn_instance_id,
+    :bpmn_process_id
+  ]
+
 config :bpmn, :persistence,
   adapter: Bpmn.Persistence.Adapter.ETS,
   auto_dehydrate: true

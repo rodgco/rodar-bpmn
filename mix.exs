@@ -54,7 +54,8 @@ defmodule Bpmn.MixProject do
       {:ex_doc, "~> 0.34", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: [:dev, :test], runtime: false},
       {:jason, "~> 1.4"},
-      {:erlsom, "~> 1.5"}
+      {:erlsom, "~> 1.5"},
+      {:telemetry, "~> 1.2"}
     ]
   end
 

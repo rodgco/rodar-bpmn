@@ -49,6 +49,8 @@ defmodule Bpmn do
 
   """
 
+  require Logger
+
   @typedoc "A BPMN element represented as a tagged tuple with a map of attributes"
   @type element :: {atom(), map()}
 
@@ -153,7 +155,9 @@ defmodule Bpmn do
       timestamp: System.monotonic_time(:millisecond)
     })
 
-    result = dispatch(elem, context)
+    Logger.metadata(bpmn_node_id: id, bpmn_node_type: type, bpmn_token_id: token.id)
+    span_metadata = %{node_id: id, node_type: type, token_id: token.id}
+    result = Bpmn.Telemetry.node_span(span_metadata, fn -> dispatch(elem, context) end)
 
     result_type =
       case result do

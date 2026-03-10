@@ -48,13 +48,17 @@ defmodule Bpmn.Token do
   """
   @spec new(keyword()) :: t()
   def new(opts \\ []) do
-    struct!(
-      __MODULE__,
-      Keyword.merge(
-        [id: generate_id(), created_at: System.monotonic_time(:millisecond)],
-        opts
+    token =
+      struct!(
+        __MODULE__,
+        Keyword.merge(
+          [id: generate_id(), created_at: System.monotonic_time(:millisecond)],
+          opts
+        )
       )
-    )
+
+    Bpmn.Telemetry.token_created(token)
+    token
   end
 
   @doc """

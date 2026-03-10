@@ -38,6 +38,7 @@ defmodule Bpmn.Event.Bus do
   def subscribe(event_type, event_name, metadata \\ %{}) do
     key = {event_type, event_name}
     {:ok, _} = Registry.register(@registry, key, metadata)
+    Bpmn.Telemetry.event_subscribed(event_type, event_name, Map.get(metadata, :node_id))
     {:ok, key}
   end
 
@@ -77,11 +78,13 @@ defmodule Bpmn.Event.Bus do
 
     case Registry.lookup(@registry, key) do
       [] ->
+        Bpmn.Telemetry.event_published(:message, event_name, 0)
         {:error, :no_subscriber}
 
       [{pid, metadata} | _] ->
         send(pid, {:bpmn_event, :message, event_name, payload, metadata})
         Registry.unregister_match(@registry, key, metadata, [])
+        Bpmn.Telemetry.event_published(:message, event_name, 1)
         :ok
     end
   end
@@ -95,6 +98,9 @@ defmodule Bpmn.Event.Bus do
       end
     end)
 
+    count = Registry.lookup(@registry, key) |> length()
+    Bpmn.Telemetry.event_published(:signal, event_name, count)
+
     :ok
   end
 
@@ -106,6 +112,9 @@ defmodule Bpmn.Event.Bus do
         send(pid, {:bpmn_event, :escalation, event_name, payload, metadata})
       end
     end)
+
+    count = Registry.lookup(@registry, key) |> length()
+    Bpmn.Telemetry.event_published(:escalation, event_name, count)
 
     :ok
   end
