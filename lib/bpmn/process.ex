@@ -287,7 +287,7 @@ defmodule Bpmn.Process do
 
   def handle_call(:terminate, _from, state) do
     if Process.alive?(state.context) do
-      GenServer.stop(state.context, :normal)
+      DynamicSupervisor.terminate_child(Bpmn.ContextSupervisor, state.context)
     end
 
     {:reply, :ok, %{state | status: :terminated}}
