@@ -21,7 +21,7 @@ defmodule RodarBpmn.Telemetry.LogHandler do
 
   require Logger
 
-  @handler_id "rodar-bpmn-default-log-handler"
+  @handler_id "rodar_bpmn-default-log-handler"
 
   @doc """
   Attach the log handler to all BPMN telemetry events.
