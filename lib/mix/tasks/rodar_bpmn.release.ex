@@ -24,6 +24,7 @@ defmodule Mix.Tasks.RodarBpmn.Release do
   ## Options
 
     * `--dry-run` - show what would happen without making any changes
+    * `--publish` - publish the package to Hex after tagging the release
 
   ## Prerequisites
 
@@ -37,8 +38,11 @@ defmodule Mix.Tasks.RodarBpmn.Release do
 
   @impl Mix.Task
   def run(args) do
-    {opts, positional, _} = OptionParser.parse(args, strict: [dry_run: :boolean])
+    {opts, positional, _} =
+      OptionParser.parse(args, strict: [dry_run: :boolean, publish: :boolean])
+
     dry_run = Keyword.get(opts, :dry_run, false)
+    publish = Keyword.get(opts, :publish, false)
 
     bump =
       case positional do
@@ -46,7 +50,7 @@ defmodule Mix.Tasks.RodarBpmn.Release do
           String.to_atom(b)
 
         _ ->
-          Mix.raise("Usage: mix rodar_bpmn.release <patch|minor|major> [--dry-run]")
+          Mix.raise("Usage: mix rodar_bpmn.release <patch|minor|major> [--dry-run] [--publish]")
       end
 
     current_version = read_version()
@@ -72,6 +76,11 @@ defmodule Mix.Tasks.RodarBpmn.Release do
       Mix.shell().info("[dry-run] Would update CHANGELOG.md with release date #{today}")
       Mix.shell().info("[dry-run] Would commit: release: v#{release_version}")
       Mix.shell().info("[dry-run] Would tag: v#{release_version}")
+
+      if publish do
+        Mix.shell().info("[dry-run] Would publish to Hex")
+      end
+
       Mix.shell().info("[dry-run] Would update VERSION to #{next_dev_version}")
       Mix.shell().info("[dry-run] Would commit: build: start v#{next_dev_version} development")
     else
@@ -92,6 +101,12 @@ defmodule Mix.Tasks.RodarBpmn.Release do
         git!(["tag", "-a", "v#{release_version}", "-m", "Release v#{release_version}"])
       end)
 
+      if publish do
+        step("Publishing v#{release_version} to Hex", fn ->
+          mix!(["hex.publish", "--yes"])
+        end)
+      end
+
       step("Bumping VERSION to #{next_dev_version}", fn ->
         write_version(next_dev_version)
       end)
@@ -105,7 +120,8 @@ defmodule Mix.Tasks.RodarBpmn.Release do
       Mix.shell().info("Release v#{release_version} complete!")
       Mix.shell().info("")
       Mix.shell().info("Next steps:")
-      Mix.shell().info("  git push origin develop --tags")
+      Mix.shell().info("  git push origin main --tags")
+      Mix.shell().info("  # then merge main back into develop")
     end
   end
 
@@ -165,6 +181,16 @@ defmodule Mix.Tasks.RodarBpmn.Release do
       )
 
     File.write!(@changelog_file, updated)
+  end
+
+  defp mix!(args) do
+    case System.cmd("mix", args, stderr_to_stdout: true) do
+      {output, 0} ->
+        output
+
+      {output, code} ->
+        Mix.raise("mix #{Enum.join(args, " ")} failed (exit #{code}):\n#{output}")
+    end
   end
 
   defp git!(args) do
