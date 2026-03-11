@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `RodarBpmn.Expression.ScriptEngine` behaviour and `RodarBpmn.Expression.ScriptRegistry` for pluggable script language support in script tasks
+
 ## [1.0.7] - 2026-03-11
 
 ## [1.0.6] - 2026-03-11

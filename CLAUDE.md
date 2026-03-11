@@ -84,6 +84,8 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 - **`RodarBpmn.Expression.Feel.Parser`** — NimbleParsec-based FEEL parser producing AST tuples. Supports arithmetic, comparisons, boolean operators, paths, bracket access, if-then-else, in operator (list/range), function calls (including space-separated names like `string length`), and list literals.
 - **`RodarBpmn.Expression.Feel.Evaluator`** — Tree-walking evaluator for FEEL AST. Implements null propagation, three-valued boolean logic, string concatenation via `+`, and path resolution in nested maps.
 - **`RodarBpmn.Expression.Feel.Functions`** — Built-in FEEL functions: numeric (`abs`, `floor`, `ceiling`, `round`, `min`, `max`, `sum`, `count`), string (`string length`, `contains`, `starts with`, `ends with`, `upper case`, `lower case`, `substring`), boolean (`not`), null (`is null`). Null propagation for all except `is null` and `not`.
+- **`RodarBpmn.Expression.ScriptEngine`** — Behaviour for pluggable script language engines. Single `eval/2` callback receiving script text and bindings map, returning `{:ok, result}` or `{:error, reason}`.
+- **`RodarBpmn.Expression.ScriptRegistry`** — GenServer for script engine registrations. `register/2` (language string → module), `unregister/1`, `lookup/1`, `list/0`. Used by `Activity.Task.Script` to resolve languages beyond built-in `"elixir"` and `"feel"`.
 - **`RodarBpmn.Expression.TestHelpers`** — Convenience functions for evaluating expressions against sample data without a full process context, and for validating expression safety.
 - **`RodarBpmn.Validation`** — Structural validation for parsed process maps. `validate/1` returns accumulated `{:ok, map} | {:error, [issue]}`. `validate!/1` raises. `validate_collaboration/2` checks participant refs and message flow refs. 9 rules covering start/end events, sequence flow refs, orphan nodes, gateway outgoing, exclusive gateway defaults, boundary attachment.
 - **`RodarBpmn.Collaboration`** — Multi-participant orchestration. `start/2` registers processes, creates instances, wires message flows via event bus, activates all. `stop/1` terminates all instances. Uses existing `RodarBpmn.Event.Bus` for inter-process messaging.
@@ -102,7 +104,7 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 
 ### Supervision Tree
 
-`RodarBpmn.Application` starts: `RodarBpmn.ProcessRegistry` (Elixir Registry, `:unique`), `RodarBpmn.EventRegistry` (Elixir Registry, `:duplicate`), `RodarBpmn.Registry`, `RodarBpmn.TaskRegistry`, `RodarBpmn.ContextSupervisor` (DynamicSupervisor), `RodarBpmn.ProcessSupervisor` (DynamicSupervisor), `RodarBpmn.Event.Start.Trigger`, and conditionally the persistence adapter (e.g., `RodarBpmn.Persistence.Adapter.ETS`) if `:persistence` config is set.
+`RodarBpmn.Application` starts: `RodarBpmn.ProcessRegistry` (Elixir Registry, `:unique`), `RodarBpmn.EventRegistry` (Elixir Registry, `:duplicate`), `RodarBpmn.Registry`, `RodarBpmn.TaskRegistry`, `RodarBpmn.Expression.ScriptRegistry`, `RodarBpmn.ContextSupervisor` (DynamicSupervisor), `RodarBpmn.ProcessSupervisor` (DynamicSupervisor), `RodarBpmn.Event.Start.Trigger`, and conditionally the persistence adapter (e.g., `RodarBpmn.Persistence.Adapter.ETS`) if `:persistence` config is set.
 
 ### Module Organization
 

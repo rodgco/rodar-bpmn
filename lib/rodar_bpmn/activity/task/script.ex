@@ -25,6 +25,7 @@ defmodule RodarBpmn.Activity.Task.Script do
   alias RodarBpmn.Context
   alias RodarBpmn.Expression.Feel
   alias RodarBpmn.Expression.Sandbox
+  alias RodarBpmn.Expression.ScriptRegistry
 
   @doc """
   Receive the token for the element and execute the script.
@@ -73,7 +74,19 @@ defmodule RodarBpmn.Activity.Task.Script do
     Feel.eval(script, data)
   end
 
-  defp run_script(lang, _script, _data) do
-    {:error, "Unsupported script language: #{lang}. Only Elixir and FEEL are supported."}
+  defp run_script(lang, script, data) do
+    case ScriptRegistry.lookup(lang) do
+      {:ok, engine} ->
+        script_text =
+          case script do
+            {:bpmn_script, %{expression: expr}} -> expr
+            bin when is_binary(bin) -> bin
+          end
+
+        engine.eval(script_text, data)
+
+      :error ->
+        {:error, "Unsupported script language: #{inspect(lang)}"}
+    end
   end
 end
