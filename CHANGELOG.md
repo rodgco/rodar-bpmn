@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `usage-rules.md` — package-level usage rules file with GOOD/BAD code examples for AI agents, included in hex package
+
 ## [1.1.0] - 2026-03-11
 
 ### Changed

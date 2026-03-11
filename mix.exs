@@ -25,7 +25,7 @@ defmodule RodarBpmn.MixProject do
   defp package do
     [
       name: "rodar_bpmn",
-      files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG.md"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG.md", "usage-rules.md"],
       maintainers: ["Rodrigo Couto"],
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/rodar-project/rodar_bpmn"}

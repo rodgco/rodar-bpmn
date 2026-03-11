@@ -149,10 +149,28 @@ Feature branches off `develop`. PRs target `develop`.
 All subagents (launched via the Agent tool) MUST follow these rules:
 
 1. **Worktree isolation**: Always use `isolation: "worktree"` so multiple agents can work in parallel without file conflicts.
-2. **Update documentation**: After making code changes, update relevant docs — CLAUDE.md (architecture, key modules), module `@moduledoc`/`@doc`, and ExDoc guides in `guides/` as needed.
+2. **Update documentation**: After making code changes, update relevant docs — CLAUDE.md (architecture, key modules), module `@moduledoc`/`@doc`, ExDoc guides in `guides/`, and `usage-rules.md` (see below) as needed.
 3. **Pass all CI checks before committing**: Before creating a commit, run and verify all pass:
    - `mix compile --warnings-as-errors`
    - `mix test`
    - `mix credo --strict`
    - `mix dialyzer` (use 600000ms timeout)
 4. **Commit at the end**: After all checks pass, commit the changes in the worktree with a properly formatted commit message (see Commit Message Format above).
+
+## Usage Rules (usage-rules.md)
+
+`usage-rules.md` is a package-level file that AI agents consume to learn coding conventions, best practices, and common mistakes when working with `rodar_bpmn`. It is included in the hex package via the `files` list in `mix.exs`.
+
+**When to update**: Any change that affects the public API, behaviours, configuration, or execution semantics must be reflected in `usage-rules.md`. This includes:
+- New or changed module APIs (e.g., new Context functions, new behaviours)
+- New configuration options (e.g., persistence settings, validation flags)
+- Changed return values or execution flow
+- New handler wiring approaches or lookup priority changes
+- New event types or delivery semantics
+
+**Quality guidelines**:
+- Every section must include `# GOOD` and `# BAD` code examples showing correct usage and common mistakes
+- Examples must be valid, runnable Elixir code (not pseudocode)
+- Keep descriptions concise — focus on what users get wrong, not exhaustive API docs
+- Organize by user intent (e.g., "Service Task Handlers"), not by module name
+- When adding a new section, follow the existing structure: brief description → good example → bad example with explanation
