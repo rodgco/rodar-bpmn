@@ -485,29 +485,25 @@ Tests cover:
 
 ## Versioning & Releases
 
-This project follows [Semantic Versioning](https://semver.org/). The current version lives in the `VERSION` file at the project root and is read by `mix.exs` at compile time. During development, `VERSION` carries a `-dev` suffix (e.g., `1.0.4-dev`), meaning "the next release will be `1.0.4`". The `-dev` suffix is never published.
+This project follows [Semantic Versioning](https://semver.org/). The version in `mix.exs` is the single source of truth. The **bump type** determines the release version, decided at release time:
 
-The **bump type** controls the *next* development version after the release — the release itself is always `VERSION` minus `-dev`:
-
-| Current `VERSION` | Bump type | Release version | Next `VERSION`  |
+| `mix.exs` version | Bump type | Release version | `mix.exs` after |
 |--------------------|-----------|-----------------|-----------------|
-| `1.0.4-dev`        | `patch`   | `1.0.4`         | `1.0.5-dev`     |
-| `1.0.4-dev`        | `minor`   | `1.0.4`         | `1.1.0-dev`     |
-| `1.0.4-dev`        | `major`   | `1.0.4`         | `2.0.0-dev`     |
+| `1.0.8`            | `patch`   | `1.0.9`         | `1.0.9`         |
+| `1.0.8`            | `minor`   | `1.1.0`         | `1.1.0`         |
+| `1.0.8`            | `major`   | `2.0.0`         | `2.0.0`         |
 
 ### Create a release
 
-1. Finish work on `develop`, ensure `CHANGELOG.md` has entries under `## [Unreleased]`
-2. Merge and release:
+1. Ensure `CHANGELOG.md` has entries under `## [Unreleased]`
+2. Release:
    ```shell
-   git checkout main && git merge develop
-   mix rodar_bpmn.release patch --dry-run     # preview first
-   mix rodar_bpmn.release patch --publish     # release + publish to hex.pm
+   mix rodar_release patch --dry-run     # preview first
+   mix rodar_release patch --publish     # release + publish to hex.pm
    git push origin main --tags
-   git checkout develop && git merge main && git push origin develop
    ```
 
-The release task strips `-dev`, updates CHANGELOG with the release date, commits, tags `v{version}`, bumps VERSION to the next dev version, and commits again. Git tags use the `v{version}` format (e.g., `v1.0.4`).
+The release task bumps the version in `mix.exs`, updates CHANGELOG with the release date, commits, and tags `v{version}` (e.g., `v1.0.9`).
 
 ## Acknowledgments
 

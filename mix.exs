@@ -1,12 +1,10 @@
 defmodule RodarBpmn.MixProject do
   use Mix.Project
 
-  @version "VERSION" |> File.read!() |> String.trim()
-
   def project do
     [
       app: :rodar_bpmn,
-      version: @version,
+      version: "1.0.8",
       elixir: "~> 1.16",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -27,7 +25,7 @@ defmodule RodarBpmn.MixProject do
   defp package do
     [
       name: "rodar_bpmn",
-      files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG.md", "VERSION"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG.md"],
       maintainers: ["Rodrigo Couto"],
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/rodar-project/rodar_bpmn"}
@@ -57,7 +55,8 @@ defmodule RodarBpmn.MixProject do
       {:jason, "~> 1.4"},
       {:erlsom, "~> 1.5"},
       {:nimble_parsec, "~> 1.4"},
-      {:telemetry, "~> 1.2"}
+      {:telemetry, "~> 1.2"},
+      {:rodar_release, github: "rodar-project/rodar_release", only: :dev, runtime: false}
     ]
   end
 

@@ -160,11 +160,11 @@ Example entry:
 - Resolve token leak when parallel gateway has unbalanced branches
 ```
 
-Maintainers will promote unreleased entries to a versioned section when cutting a release via `mix rodar_bpmn.release`.
+Maintainers will promote unreleased entries to a versioned section when cutting a release via `mix rodar_release`.
 
 ### Versioning
 
-The project follows [Semantic Versioning](https://semver.org/). The `VERSION` file at the project root is the single source of truth and always carries a `-dev` suffix during development (e.g., `1.0.4-dev`). As a contributor, you don't need to modify `VERSION` — maintainers handle releases.
+The project follows [Semantic Versioning](https://semver.org/). The version in `mix.exs` is the single source of truth. As a contributor, you don't need to modify the version — maintainers handle releases.
 
 For full details on the release workflow and what bump types mean, see the [Versioning & Releases](README.md#versioning--releases) section in the README.
 
