@@ -1,7 +1,6 @@
 # Rodar BPMN Engine
 
 [![CI](https://github.com/rodgco/rodar-bpmn/actions/workflows/ci.yml/badge.svg)](https://github.com/rodgco/rodar-bpmn/actions/workflows/ci.yml)
-[![Hex Version](https://img.shields.io/hexpm/v/rodar_bpmn.svg)](https://hex.pm/packages/rodar_bpmn)
 
 A BPMN 2.0 execution engine for Elixir. Parses BPMN 2.0 XML diagrams and executes processes using a token-based flow model.
 
@@ -26,12 +25,11 @@ A BPMN 2.0 execution engine for Elixir. Parses BPMN 2.0 XML diagrams and execute
 
 ## Installation
 
-The package is [available on Hex](https://hex.pm/packages/rodar_bpmn) and can be installed
-by adding `rodar_bpmn` to your list of dependencies in `mix.exs`:
+Add `rodar_bpmn` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:rodar_bpmn, "~> 1.0.0"}]
+  [{:rodar_bpmn, github: "rodgco/rodar-bpmn"}]
 end
 ```
 

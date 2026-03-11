@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Actions workflow to deploy ExDoc documentation to GitHub Pages on push to main
+
+### Changed
+
+- Update installation instructions to use GitHub repository instead of Hex.pm
+- Update homepage URL in mix.exs to point to GitHub Pages documentation
+
 ## [1.0.4] - 2026-03-11
 
 ### Changed

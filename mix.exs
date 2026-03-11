@@ -17,7 +17,7 @@ defmodule RodarBpmn.MixProject do
       # Docs
       name: "Rodar BPMN",
       source_url: "https://github.com/rodgco/rodar-bpmn",
-      homepage_url: "https://github.com/rodgco/rodar-bpmn",
+      homepage_url: "https://rodgco.github.io/rodar-bpmn/",
       test_coverage: [tool: ExCoveralls],
       dialyzer: [plt_add_apps: [:mix, :ex_unit]],
       docs: docs()
