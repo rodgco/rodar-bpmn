@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-11
+
 ### Changed
 
 - Replace `VERSION` file with inline version in `mix.exs` as the single source of truth
