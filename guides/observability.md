@@ -72,7 +72,20 @@ RodarBpmn.Observability.instances_by_version("order-process", 2)
 
 # Execution history for a specific instance
 RodarBpmn.Observability.execution_history(process_pid)
+# => [%{node_id: "start_1", token_id: "abc", result: :ok, ...}, ...]
+```
 
+Each history entry includes a `result` field that reflects how the node itself completed:
+
+- `:ok` — node completed successfully (including nodes that called `release_token` to forward execution downstream)
+- `:manual` — node suspended execution (user task, receive task, etc.)
+- `:error` — node encountered an error
+- `:fatal` — unrecoverable failure
+- `:not_implemented` — no handler for this element type
+
+A node that calls `release_token` is always classified as `:ok`, even when a downstream node suspends or errors. This ensures that execution history accurately reflects each node's own outcome rather than the propagated result of the entire chain.
+
+```elixir
 # Engine health check
 RodarBpmn.Observability.health()
 # => %{supervisor_alive: true, process_count: 5, context_count: 5,

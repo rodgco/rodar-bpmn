@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `usage-rules.md` — package-level usage rules file with GOOD/BAD code examples for AI agents, included in hex package
 
+### Fixed
+
+- Execution history now correctly classifies preceding nodes as `:ok` when a downstream node suspends (e.g., user task returning `{:manual, _}`). Previously all nodes in the chain were recorded with the propagated downstream result instead of their own
+
 ## [1.1.0] - 2026-03-11
 
 ### Changed

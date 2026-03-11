@@ -59,6 +59,8 @@ All BPMN nodes implement `token_in/2` (some also `token_in/3` with `from_flow` f
 
 Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`, `{:not_implemented}`.
 
+**Execution history classification**: `execute/3` records each node's result in the context history via `record_completion/4`. A node that calls `release_token` is classified as `:ok` (it completed its own work and forwarded the token), regardless of what downstream nodes return. Only nodes that return without releasing (e.g., a user task returning `{:manual, _}`) are classified by their own return value. This is tracked via a per-token meta flag (`{:_token_released, token_id}`) set by `mark_token_released/1`.
+
 ### Key Modules
 
 - **`RodarBpmn`** — Main dispatcher; `execute/2` (backward compat) and `execute/3` (with token tracking + execution history). Dispatches to handler modules via private `dispatch/2`.
