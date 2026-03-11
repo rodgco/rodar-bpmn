@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `RodarBpmn.Expression.ScriptEngine` behaviour and `RodarBpmn.Expression.ScriptRegistry` for pluggable script language support in script tasks
+- `Diagram.load/2` accepts a `:handler_map` option to inject handler modules into service task elements at parse time
+- `Activity.Task.Service` falls back to `TaskRegistry` lookup by task ID when no inline `:handler` attribute is present
 
 ## [1.0.7] - 2026-03-11
 
