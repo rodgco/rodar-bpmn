@@ -87,6 +87,67 @@ end
 RodarBpmn.TaskRegistry.register(:http_task, MyApp.HttpTask)
 ```
 
+## Service Task Handlers
+
+Service tasks use a separate handler mechanism from `RodarBpmn.TaskHandler`. A service task handler implements the `RodarBpmn.Activity.Task.Service.Handler` behaviour, which has an `execute/2` callback instead of `token_in/2`:
+
+```elixir
+defmodule MyApp.CheckInventory do
+  @behaviour RodarBpmn.Activity.Task.Service.Handler
+
+  @impl true
+  def execute(attrs, data) do
+    item_id = Map.get(data, "item_id")
+    # ... business logic ...
+    {:ok, %{in_stock: true, quantity: 42}}
+  end
+end
+```
+
+The `execute/2` callback receives:
+
+- `attrs` -- the BPMN element attribute map (including `:id`, `:name`, `:outgoing`, etc.)
+- `data` -- the current process data map (from `RodarBpmn.Context.get(context, :data)`)
+
+Return `{:ok, result_map}` to merge keys into the context data, or `{:error, reason}` to signal failure.
+
+### Wiring Service Handlers
+
+There are two ways to connect a handler to a service task:
+
+#### 1. At parse time with `handler_map`
+
+Pass a `:handler_map` option to `RodarBpmn.Engine.Diagram.load/2`. The map keys are BPMN element ID strings, and the values are handler modules:
+
+```elixir
+handler_map = %{
+  "Task_check_inventory" => MyApp.CheckInventory,
+  "Task_send_email" => MyApp.SendEmail
+}
+
+diagram = RodarBpmn.Engine.Diagram.load(xml, handler_map: handler_map)
+```
+
+This injects a `:handler` attribute directly into the parsed element, so the handler is resolved without any registry lookup at runtime.
+
+#### 2. At runtime with `TaskRegistry`
+
+Register the handler by the task's BPMN element ID:
+
+```elixir
+RodarBpmn.TaskRegistry.register("Task_check_inventory", MyApp.CheckInventory)
+```
+
+The service task module looks up the task ID in the `TaskRegistry` when no inline `:handler` attribute is present.
+
+### Handler Resolution Priority
+
+When a service task executes, the handler is resolved in this order:
+
+1. **Inline `:handler` attribute** -- if the element has a `:handler` key (set by `Diagram.load/2` `:handler_map` or manual injection), that module is used directly.
+2. **`RodarBpmn.TaskRegistry` lookup** -- the task's `:id` is looked up in the registry. This works for both service-task-specific registrations and general type registrations.
+3. **Fallback** -- if neither source provides a handler, `{:not_implemented}` is returned.
+
 ## Script Engines vs Task Handlers
 
 Task handlers and script engines serve different extensibility roles:

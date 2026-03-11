@@ -15,7 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.7] - 2026-03-11
 
+### Changed
+
+- Update repository URLs from rodar-bpmn to rodar_bpmn
+
 ## [1.0.6] - 2026-03-11
+
+### Changed
+
+- Update repository URLs to rodar-project organization
+- Moved Roadmap to parent folder
 
 ## [1.0.5] - 2026-03-11
 

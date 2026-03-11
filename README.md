@@ -173,6 +173,20 @@ defmodule MyApp.CheckInventory do
 end
 ```
 
+Wire handlers at parse time with `handler_map`, or at runtime via the `TaskRegistry`:
+
+```elixir
+# Option 1: Inject at parse time
+diagram = RodarBpmn.Engine.Diagram.load(xml, handler_map: %{
+  "Task_check" => MyApp.CheckInventory
+})
+
+# Option 2: Register at runtime (looked up by task ID)
+RodarBpmn.TaskRegistry.register("Task_check", MyApp.CheckInventory)
+```
+
+Handler resolution priority: inline `:handler` attribute first, then `TaskRegistry` lookup by task ID, then `{:not_implemented}` fallback.
+
 ## Supported BPMN Elements
 
 ### Events
@@ -211,7 +225,7 @@ end
 | ------------ | ----------- | --------------------------------------------------------------------- |
 | Script Task  | Implemented | Elixir (sandboxed AST evaluation), FEEL                               |
 | User Task    | Implemented | Pause/resume with `{:manual, task_data}`                              |
-| Service Task | Implemented | Handler behaviour callback                                            |
+| Service Task | Implemented | Handler behaviour callback; inline handler, TaskRegistry, or fallback |
 | Send Task    | Implemented | Publishes to event bus if `messageRef` present                        |
 | Receive Task | Implemented | Subscribes to event bus if `messageRef` present; auto-resume on match |
 | Manual Task  | Implemented | Pause/resume like User Task; type `:manual_task`                      |
@@ -290,7 +304,7 @@ The engine uses a **token-based execution model**. A `RodarBpmn.Token` struct tr
 - **`RodarBpmn.Expression`** — Evaluates condition expressions on sequence flows. Routes to the Elixir sandbox or FEEL evaluator based on language.
 - **`RodarBpmn.Expression.Sandbox`** — AST-restricted Elixir expression evaluator (replaces `Code.eval_string`).
 - **`RodarBpmn.Expression.Feel`** — FEEL (Friendly Enough Expression Language) evaluator. NimbleParsec-based parser with null propagation, three-valued boolean logic, and built-in functions.
-- **`RodarBpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`.
+- **`RodarBpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`. `load/2` accepts a `:handler_map` option to inject service task handlers at parse time.
 - **`RodarBpmn.Event.Bus`** — Registry-based pub/sub for BPMN events (message, signal, escalation).
 - **`RodarBpmn.Event.Timer`** — ISO 8601 duration parsing and timer scheduling.
 - **`RodarBpmn.Telemetry`** — Telemetry event definitions and helpers; wraps node execution with `:telemetry.span/3`.

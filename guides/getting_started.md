@@ -21,6 +21,16 @@ diagram = RodarBpmn.Engine.Diagram.load(File.read!("my_process.bpmn"))
 {:bpmn_process, _attrs, _elements} = process = hd(diagram.processes)
 ```
 
+You can also wire service task handlers at parse time with `load/2`:
+
+```elixir
+diagram = RodarBpmn.Engine.Diagram.load(xml, handler_map: %{
+  "Task_check" => MyApp.CheckInventory
+})
+```
+
+See the [Task Handlers](task_handlers.md) guide for details.
+
 ### 2. Register and Run
 
 ```elixir
