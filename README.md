@@ -473,24 +473,29 @@ Tests cover:
 
 ## Versioning & Releases
 
-This project follows [Semantic Versioning](https://semver.org/). The current version lives in the `VERSION` file at the project root and is read by `mix.exs` at compile time.
+This project follows [Semantic Versioning](https://semver.org/). The current version lives in the `VERSION` file at the project root and is read by `mix.exs` at compile time. During development, `VERSION` carries a `-dev` suffix (e.g., `1.0.4-dev`), meaning "the next release will be `1.0.4`". The `-dev` suffix is never published.
 
-- **Development** happens on `develop` with a `-dev` suffix (e.g., `1.0.0-dev`)
-- **Releases** are cut on `main` after merging `develop`:
-  1. Merge `develop` into `main`
-  2. Run `mix rodar_bpmn.release <patch|minor|major>` on `main`
-  3. Merge `main` back into `develop` to pick up the version bump
-- **Changelog** follows [Keep a Changelog](https://keepachangelog.com/) format in `CHANGELOG.md`
-- **Git tags** use the `v{version}` format (e.g., `v1.0.0`)
+The **bump type** controls the *next* development version after the release — the release itself is always `VERSION` minus `-dev`:
+
+| Current `VERSION` | Bump type | Release version | Next `VERSION`  |
+|--------------------|-----------|-----------------|-----------------|
+| `1.0.4-dev`        | `patch`   | `1.0.4`         | `1.0.5-dev`     |
+| `1.0.4-dev`        | `minor`   | `1.0.4`         | `1.1.0-dev`     |
+| `1.0.4-dev`        | `major`   | `1.0.4`         | `2.0.0-dev`     |
 
 ### Create a release
 
-```shell
-mix rodar_bpmn.release patch          # Release current version, bump patch
-mix rodar_bpmn.release minor          # Release current version, bump minor
-mix rodar_bpmn.release major          # Release current version, bump major
-mix rodar_bpmn.release patch --dry-run  # Preview without making changes
-```
+1. Finish work on `develop`, ensure `CHANGELOG.md` has entries under `## [Unreleased]`
+2. Merge and release:
+   ```shell
+   git checkout main && git merge develop
+   mix rodar_bpmn.release patch --dry-run     # preview first
+   mix rodar_bpmn.release patch --publish     # release + publish to hex.pm
+   git push origin main --tags
+   git checkout develop && git merge main && git push origin develop
+   ```
+
+The release task strips `-dev`, updates CHANGELOG with the release date, commits, tags `v{version}`, bumps VERSION to the next dev version, and commits again. Git tags use the `v{version}` format (e.g., `v1.0.4`).
 
 ## Acknowledgments
 
