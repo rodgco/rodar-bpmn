@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replace `VERSION` file with inline version in `mix.exs` as the single source of truth
+- Extract release tooling to `rodar_release` package — release command is now `mix rodar_release`
+- Bump type now controls the release version (decided at release time) instead of the next dev version
+- Remove `-dev` suffix convention from versioning workflow
+
+### Removed
+
+- `VERSION` file — no longer needed
+- `Mix.Tasks.RodarBpmn.Release` — replaced by `mix rodar_release` from the `rodar_release` package
+
 ## [1.0.8] - 2026-03-11
 
 ### Added
