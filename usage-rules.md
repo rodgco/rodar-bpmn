@@ -370,6 +370,44 @@ case RodarBpmn.Process.status(pid) do
 end
 ```
 
+## Scaffolding Handlers
+
+The `mix rodar_bpmn.scaffold` task generates handler stubs from a BPMN file.
+It picks the correct behaviour based on task type and prints wiring instructions.
+
+```elixir
+# GOOD: Scaffold handlers, then customize the generated stubs
+# $ mix rodar_bpmn.scaffold order_process.bpmn
+# Creates lib/my_app/bpmn/handlers/order_process/*.ex
+
+# GOOD: Preview before writing with --dry-run
+# $ mix rodar_bpmn.scaffold order_process.bpmn --dry-run
+
+# GOOD: Customize output location and module prefix
+# $ mix rodar_bpmn.scaffold order_process.bpmn \
+#     --output-dir lib/my_app/handlers \
+#     --module-prefix MyApp.Handlers
+
+# GOOD: After scaffolding, wire service task handlers via handler_map
+handler_map = %{
+  "Task_check_inventory" => MyApp.Handlers.CheckInventory,
+  "Task_charge_payment" => MyApp.Handlers.ChargePayment
+}
+diagram = RodarBpmn.Engine.Diagram.load(xml, handler_map: handler_map)
+
+# GOOD: After scaffolding, wire non-service task handlers via TaskRegistry
+RodarBpmn.TaskRegistry.register("Task_approval", MyApp.Handlers.Approval)
+
+# BAD: Using Service.Handler behaviour for non-service tasks
+# The scaffold task picks the right behaviour automatically — don't change it
+# Service tasks → Service.Handler (execute/2)
+# All other tasks → TaskHandler (token_in/2)
+
+# BAD: Forgetting to wire handlers after scaffolding
+# Generated stubs are not auto-registered — you must wire them yourself
+# Follow the registration instructions printed by the scaffold task
+```
+
 ## Lanes (Role/Group Assignment)
 
 Lanes are structural metadata that assign flow nodes to roles, groups, or

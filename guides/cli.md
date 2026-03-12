@@ -68,6 +68,49 @@ Parses the input file and re-exports it as normalized BPMN 2.0 XML. This is usef
 
 Prints to stdout by default. Use `--output` to write to a file instead.
 
+## `mix rodar_bpmn.scaffold`
+
+Generate handler module stubs from a BPMN file:
+
+```shell
+mix rodar_bpmn.scaffold path/to/order.bpmn
+mix rodar_bpmn.scaffold path/to/order.bpmn --output-dir lib/my_app/handlers
+mix rodar_bpmn.scaffold path/to/order.bpmn --module-prefix MyApp.Handlers
+mix rodar_bpmn.scaffold path/to/order.bpmn --dry-run
+mix rodar_bpmn.scaffold path/to/order.bpmn --force
+```
+
+Parses the BPMN file, identifies all actionable tasks (service, user, send, receive, manual, and generic), and generates handler module files with the correct behaviour and callback stubs.
+
+### Options
+
+| Flag | Alias | Description |
+|------|-------|-------------|
+| `--output-dir DIR` | `-o` | Override the default output directory |
+| `--module-prefix PREFIX` | `-p` | Override the derived module prefix |
+| `--dry-run` | `-d` | Print generated code to stdout instead of writing files |
+| `--force` | `-f` | Overwrite existing files without prompting |
+
+### Defaults
+
+- **Output directory**: `lib/<app_name>/bpmn/handlers/<bpmn_filename>/`
+- **Module prefix**: `<AppName>.Bpmn.Handlers.<BpmnFilename>`
+
+### Task type mapping
+
+- Service tasks (`:bpmn_activity_task_service`) get the `RodarBpmn.Activity.Task.Service.Handler` behaviour with an `execute/2` callback
+- All other task types (user, send, receive, manual, generic) get the `RodarBpmn.TaskHandler` behaviour with a `token_in/2` callback
+
+### Conflict handling
+
+When a target file already exists and `--force` is not set, the task shows a diff and prompts:
+
+- **Overwrite** — replace the existing file
+- **Keep both** — write a new file with a `New` suffix
+- **Skip** — leave the existing file unchanged
+
+After writing files, the task prints registration instructions showing how to wire the generated handlers (via `handler_map` for service tasks, or `TaskRegistry` for others).
+
 ## Next Steps
 
 - [Getting Started](getting_started.md) — Installation and basic concepts

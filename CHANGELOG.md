@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `mix rodar_bpmn.scaffold` mix task — generates handler module stubs from a BPMN file with correct behaviours and callbacks
+- `RodarBpmn.Scaffold` module — core scaffolding logic for task extraction and handler code generation
+
 ## [1.3.0] - 2026-03-12
 
 ### Added

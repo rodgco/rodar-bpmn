@@ -19,6 +19,7 @@ mix docs                                           # Generate documentation
 mix rodar_bpmn.validate <file>                           # Validate a BPMN file
 mix rodar_bpmn.inspect <file>                            # Inspect parsed structure
 mix rodar_bpmn.run <file> [--data '{}']                  # Execute a process
+mix rodar_bpmn.scaffold <file> [--output-dir DIR]        # Generate handler stubs
 mix rodar_release <patch|minor|major>                     # Create a release
 mix rodar_release patch --dry-run                        # Preview release
 ```
@@ -94,6 +95,7 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 - **`RodarBpmn.Activity.Task.Service.Handler`** — Behaviour for service task handlers. Single `execute/2` callback receiving task attributes and context data map, returning `{:ok, result_map}` or `{:error, reason}`. Used by `Activity.Task.Service` for handler dispatch.
 - **`RodarBpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`, returns process maps keyed by element ID. Splits `intermediateThrowEvent` → `:bpmn_event_intermediate_throw`, `intermediateCatchEvent` → `:bpmn_event_intermediate_catch`. Emits condition expressions as `{:bpmn_expression, {lang, expr}}`. Parses `collaboration`, `participant`, `messageFlow`, `callActivity`, and `laneSet`/`lane` elements (including nested `childLaneSet`). Extracts `timeDuration`, `timeCycle`, `timeDate` from timer event definitions. Lane sets are stored in the process attrs as `:lane_set` (nil when absent). `load/1` parses XML, `load/2` accepts opts including `:handler_map` (map of element ID string → handler module) to inject `:handler` attributes into service task elements at parse time. `export/1` delegates to `RodarBpmn.Engine.Diagram.Export.to_xml/1`.
 - **`RodarBpmn.Engine.Diagram.Export`** — IO list-based BPMN 2.0 XML builder. Inverse of `Diagram.load/1`. Exports all element types (events, gateways, tasks, sequence flows, subprocesses), event definitions, collaboration, item definitions, and lane sets (including nested child lane sets). Strips vendor-specific attributes and `_elems`. Deterministic output with sorted attributes and element ordering (sequence flows last).
+- **`RodarBpmn.Scaffold`** — Core scaffolding logic for generating BPMN handler modules. `extract_tasks/1` finds actionable tasks in a parsed diagram, `generate_module/2` produces handler source code with the correct behaviour (`Service.Handler` for service tasks, `TaskHandler` for all others), `behaviour_for_type/1` maps BPMN types to behaviours, `registration_type/1` indicates handler wiring strategy. Used by `Mix.Tasks.RodarBpmn.Scaffold`.
 - **`RodarBpmn.Lane`** — Stateless utility module for querying lane assignments. `find_lane_for_node(lane_set, node_id)` → `{:ok, lane} | :error` (deepest lane wins), `node_lane_map(lane_set)` → `%{node_id => lane}` flat map, `all_lanes(lane_set)` → flat list of all lanes including nested. All functions accept `nil` lane set gracefully.
 - **`RodarBpmn.Persistence`** — Behaviour defining adapter callbacks (`save/2`, `load/1`, `delete/1`, `list/0`) and facade delegating to the configured adapter. Reads config from `Application.get_env(:rodar_bpmn, :persistence)`.
 - **`RodarBpmn.Persistence.Serializer`** — Converts live process state to persistable snapshots and back. Handles MapSets (→ sorted lists), timer refs (stripped), Token structs (→ plain maps). Uses `:erlang.term_to_binary`/`binary_to_term` for binary serialization.
@@ -116,6 +118,7 @@ Return tuples: `{:ok, context}`, `{:error, msg}`, `{:manual, _}`, `{:fatal, _}`,
 - `lib/rodar_bpmn/telemetry/` — Telemetry event definitions, helpers, and default log handler
 - `lib/rodar_bpmn/observability.ex` — Dashboard query APIs and health checks
 - `lib/rodar_bpmn/engine/` — BPMN 2.0 XML parser (`diagram.ex`) and exporter (`diagram/export.ex`)
+- `lib/rodar_bpmn/scaffold.ex` — Handler module scaffolding logic (task extraction, code generation)
 - `lib/rodar_bpmn/lane.ex` — Lane assignment queries (find, map, flatten)
 - `lib/rodar_bpmn/validation.ex` — Structural validation (9 process rules + lane validation + collaboration validation)
 - `lib/rodar_bpmn/collaboration.ex` — Multi-pool/multi-participant orchestration

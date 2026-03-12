@@ -461,6 +461,20 @@ mix rodar_bpmn.run path/to/process.bpmn
 mix rodar_bpmn.run path/to/process.bpmn --data '{"username": "alice"}'
 ```
 
+### Scaffold handler modules
+
+Generate handler modules for all actionable tasks in a BPMN file:
+
+```shell
+mix rodar_bpmn.scaffold path/to/order.bpmn --dry-run           # Preview generated code
+mix rodar_bpmn.scaffold path/to/order.bpmn                     # Write handler files
+mix rodar_bpmn.scaffold path/to/order.bpmn --output-dir lib/my_app/handlers
+mix rodar_bpmn.scaffold path/to/order.bpmn --module-prefix MyApp.Custom.Handlers
+mix rodar_bpmn.scaffold path/to/order.bpmn --force              # Overwrite existing files
+```
+
+Generates one module per task with the correct behaviour (`RodarBpmn.Activity.Task.Service.Handler` for service tasks, `RodarBpmn.TaskHandler` for all others) and prints registration instructions.
+
 ## Development
 
 ```shell
@@ -473,6 +487,7 @@ mix docs              # Generate documentation
 mix rodar_bpmn.validate <file>   # Validate a BPMN file
 mix rodar_bpmn.inspect <file>    # Inspect parsed structure
 mix rodar_bpmn.run <file>        # Execute a process
+mix rodar_bpmn.scaffold <file>   # Generate handler modules
 ```
 
 ### BPMN Conformance Tests
