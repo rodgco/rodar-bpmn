@@ -24,7 +24,7 @@ diagram = RodarBpmn.Engine.Diagram.load(File.read!("my_process.bpmn"))
 You can also wire service task handlers at parse time. The easiest way is convention-based auto-discovery — scaffold handlers with `mix rodar_bpmn.scaffold`, then load with the file path:
 
 ```elixir
-# Auto-discovers handlers at MyApp.Bpmn.MyProcess.Handlers.*
+# Auto-discovers handlers at MyApp.Workflow.MyProcess.Handlers.*
 diagram = RodarBpmn.Engine.Diagram.load(xml,
   bpmn_file: "my_process.bpmn",
   app_name: "MyApp"

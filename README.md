@@ -182,7 +182,7 @@ diagram = RodarBpmn.Engine.Diagram.load(xml,
   bpmn_file: "order_processing.bpmn",
   app_name: "MyApp"
 )
-# Discovers MyApp.Bpmn.OrderProcessing.Handlers.CheckInventory automatically
+# Discovers MyApp.Workflow.OrderProcessing.Handlers.CheckInventory automatically
 
 # Option 2: Inject at parse time with explicit handler_map
 diagram = RodarBpmn.Engine.Diagram.load(xml, handler_map: %{
@@ -487,7 +487,7 @@ mix rodar_bpmn.scaffold path/to/order.bpmn --force              # Overwrite exis
 
 Generates one module per task with the correct behaviour (`RodarBpmn.Activity.Task.Service.Handler` for service tasks, `RodarBpmn.TaskHandler` for all others) and prints registration instructions.
 
-Scaffolded handlers are placed at deterministic paths (e.g., `MyApp.Bpmn.Order.Handlers.ValidateOrder`), enabling convention-based auto-discovery when loading with `Diagram.load/2` using `:bpmn_file` and `:app_name` options — no manual wiring required.
+Scaffolded handlers are placed at deterministic paths (e.g., `MyApp.Workflow.Order.Handlers.ValidateOrder`), enabling convention-based auto-discovery when loading with `Diagram.load/2` using `:bpmn_file` and `:app_name` options — no manual wiring required. The namespace segment (`Workflow`) is configurable via `config :rodar_bpmn, :scaffold_namespace`.
 
 ## Development
 

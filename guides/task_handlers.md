@@ -142,7 +142,7 @@ The service task module looks up the task ID in the `TaskRegistry` when no inlin
 
 ### Convention-Based Auto-Discovery
 
-When you scaffold handlers with `mix rodar_bpmn.scaffold`, modules are placed at predictable paths (e.g., `MyApp.Bpmn.OrderProcessing.Handlers.ValidateOrder`). The engine can auto-discover these handlers when you provide the `:bpmn_file` and `:app_name` options to `Diagram.load/2`:
+When you scaffold handlers with `mix rodar_bpmn.scaffold`, modules are placed at predictable paths (e.g., `MyApp.Workflow.OrderProcessing.Handlers.ValidateOrder`). The engine can auto-discover these handlers when you provide the `:bpmn_file` and `:app_name` options to `Diagram.load/2`:
 
 ```elixir
 # Discovery is ON by default when bpmn_file + app_name are provided
@@ -155,8 +155,8 @@ diagram = RodarBpmn.Engine.Diagram.load(xml,
 # The discovery result is available for inspection:
 diagram.discovery
 # => %{
-#   handler_map: %{"Task_1" => MyApp.Bpmn.OrderProcessing.Handlers.ValidateOrder},
-#   task_registry_entries: [{"Task_2", MyApp.Bpmn.OrderProcessing.Handlers.ApproveOrder}],
+#   handler_map: %{"Task_1" => MyApp.Workflow.OrderProcessing.Handlers.ValidateOrder},
+#   task_registry_entries: [{"Task_2", MyApp.Workflow.OrderProcessing.Handlers.ApproveOrder}],
 #   not_found: ["Task_3"]
 # }
 ```
@@ -194,7 +194,7 @@ You can also use the `Discovery` module directly for programmatic discovery with
 ```elixir
 alias RodarBpmn.Scaffold.Discovery
 
-result = Discovery.discover(diagram, module_prefix: "MyApp.Bpmn.OrderProcessing.Handlers")
+result = Discovery.discover(diagram, module_prefix: "MyApp.Workflow.OrderProcessing.Handlers")
 diagram = Discovery.apply_handlers(diagram, result.handler_map)
 Discovery.register_discovered(result)
 ```
