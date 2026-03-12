@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-03-12
+
 ### Added
 
 - BPMN lane support — parser extracts `laneSet`/`lane`/`childLaneSet`/`flowNodeRef` into process attrs (`:lane_set` key)
