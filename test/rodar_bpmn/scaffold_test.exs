@@ -171,7 +171,7 @@ defmodule RodarBpmn.ScaffoldTest do
   describe "default_module_prefix/2" do
     test "builds prefix from app name and bpmn name" do
       assert Scaffold.default_module_prefix("MyApp", "OrderProcessing") ==
-               "MyApp.Bpmn.OrderProcessing.Handlers"
+               "MyApp.Workflow.OrderProcessing.Handlers"
     end
   end
 

@@ -378,7 +378,7 @@ It picks the correct behaviour based on task type and prints wiring instructions
 ```elixir
 # GOOD: Scaffold handlers, then customize the generated stubs
 # $ mix rodar_bpmn.scaffold order_process.bpmn
-# Creates lib/my_app/bpmn/order_process/handlers/*.ex
+# Creates lib/my_app/workflow/order_process/handlers/*.ex
 
 # GOOD: Preview before writing with --dry-run
 # $ mix rodar_bpmn.scaffold order_process.bpmn --dry-run
@@ -413,12 +413,13 @@ RodarBpmn.TaskRegistry.register("Task_approval", MyApp.Handlers.Approval)
 After scaffolding handlers with `mix rodar_bpmn.scaffold`, the engine can
 auto-discover them at parse time. When you pass `:bpmn_file` and `:app_name` to
 `Diagram.load/2`, it checks whether handler modules exist at the conventional
-namespace (`AppName.Bpmn.BpmnBaseName.Handlers.TaskName`) and wires them
-automatically.
+namespace (`AppName.Workflow.BpmnBaseName.Handlers.TaskName`) and wires them
+automatically. The namespace segment (default `"Workflow"`) is configurable via
+`config :rodar_bpmn, :scaffold_namespace, "CustomNamespace"`.
 
 ```elixir
 # GOOD: Enable auto-discovery by passing :bpmn_file and :app_name
-# Assumes handlers were scaffolded at MyApp.Bpmn.OrderProcessing.Handlers.*
+# Assumes handlers were scaffolded at MyApp.Workflow.OrderProcessing.Handlers.*
 xml = File.read!("order_processing.bpmn")
 
 diagram = RodarBpmn.Engine.Diagram.load(xml,
@@ -427,8 +428,8 @@ diagram = RodarBpmn.Engine.Diagram.load(xml,
 )
 
 # Discovery results are in diagram.discovery
-# %{handler_map: %{"Task_1" => MyApp.Bpmn.OrderProcessing.Handlers.ValidateOrder, ...},
-#   task_registry_entries: [{"Task_user_1", MyApp.Bpmn.OrderProcessing.Handlers.ApproveOrder}],
+# %{handler_map: %{"Task_1" => MyApp.Workflow.OrderProcessing.Handlers.ValidateOrder, ...},
+#   task_registry_entries: [{"Task_user_1", MyApp.Workflow.OrderProcessing.Handlers.ApproveOrder}],
 #   not_found: ["Task_3"]}
 
 # GOOD: Mix explicit handler_map with discovery (explicit wins)
@@ -451,7 +452,7 @@ diagram = RodarBpmn.Engine.Diagram.load(xml,
 # GOOD: Use discovery programmatically for more control
 alias RodarBpmn.Scaffold.Discovery
 diagram = RodarBpmn.Engine.Diagram.load(xml)
-result = Discovery.discover(diagram, module_prefix: "MyApp.Bpmn.OrderProcessing.Handlers")
+result = Discovery.discover(diagram, module_prefix: "MyApp.Workflow.OrderProcessing.Handlers")
 diagram = Discovery.apply_handlers(diagram, result.handler_map)
 Discovery.register_discovered(result)
 

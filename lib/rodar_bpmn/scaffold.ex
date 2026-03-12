@@ -12,12 +12,16 @@ defmodule RodarBpmn.Scaffold do
 
     * `bpmn_base_name/1` — derives a PascalCase name from a BPMN file path
     * `default_module_prefix/2` — builds the canonical handler namespace
-      (e.g., `"MyApp.Bpmn.OrderProcessing.Handlers"`)
+      (e.g., `"MyApp.Workflow.OrderProcessing.Handlers"`)
     * `module_name_from_element/1` — converts a task name or ID to PascalCase
 
   Together these establish the convention: a handler for task "Validate Order"
   in `order_processing.bpmn` within app `MyApp` lives at
-  `MyApp.Bpmn.OrderProcessing.Handlers.ValidateOrder`.
+  `MyApp.Workflow.OrderProcessing.Handlers.ValidateOrder`.
+
+  The namespace segment (default `"Workflow"`) is configurable via application config:
+
+      config :rodar_bpmn, :scaffold_namespace, "Workflow"
 
   ## See Also
 
@@ -184,15 +188,21 @@ defmodule RodarBpmn.Scaffold do
   @doc """
   Builds the default handler module prefix from an app name and BPMN base name.
 
+  The namespace segment between the app name and the BPMN name defaults to
+  `"Workflow"` and can be configured via:
+
+      config :rodar_bpmn, :scaffold_namespace, "CustomNamespace"
+
   ## Examples
 
       iex> RodarBpmn.Scaffold.default_module_prefix("MyApp", "OrderProcessing")
-      "MyApp.Bpmn.OrderProcessing.Handlers"
+      "MyApp.Workflow.OrderProcessing.Handlers"
 
   """
   @spec default_module_prefix(String.t(), String.t()) :: String.t()
   def default_module_prefix(app_name, bpmn_name) do
-    "#{app_name}.Bpmn.#{bpmn_name}.Handlers"
+    namespace = Application.get_env(:rodar_bpmn, :scaffold_namespace, "Workflow")
+    "#{app_name}.#{namespace}.#{bpmn_name}.Handlers"
   end
 
   # --- Private ---

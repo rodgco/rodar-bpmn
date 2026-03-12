@@ -19,8 +19,8 @@ defmodule Mix.Tasks.RodarBpmn.Scaffold do
 
   ## Defaults
 
-    * Output dir: `lib/<app_name>/bpmn/<bpmn_filename>/handlers/`
-    * Module prefix: `<AppName>.Bpmn.<BpmnFilename>.Handlers`
+    * Output dir: `lib/<app_name>/workflow/<bpmn_filename>/handlers/`
+    * Module prefix: `<AppName>.Workflow.<BpmnFilename>.Handlers`
   """
 
   use Mix.Task
@@ -254,7 +254,9 @@ defmodule Mix.Tasks.RodarBpmn.Scaffold do
   defp default_output_dir(app_name, bpmn_name) do
     snake_app = Macro.underscore(app_name)
     snake_bpmn = Macro.underscore(bpmn_name)
-    Path.join(["lib", snake_app, "bpmn", snake_bpmn, "handlers"])
+    namespace = Application.get_env(:rodar_bpmn, :scaffold_namespace, "Workflow")
+    snake_namespace = Macro.underscore(namespace)
+    Path.join(["lib", snake_app, snake_namespace, snake_bpmn, "handlers"])
   end
 
   defp result_module_name(%{action: :kept_both} = r, _module_name, _prefix) do

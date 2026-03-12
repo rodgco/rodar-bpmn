@@ -7,9 +7,13 @@ defmodule RodarBpmn.Scaffold.Discovery do
   by checking whether a module exists at the expected namespace and implements
   the correct callback.
 
-  The naming convention is: `<AppName>.Bpmn.<BpmnFilename>.Handlers.<TaskName>`.
+  The naming convention is: `<AppName>.Workflow.<BpmnFilename>.Handlers.<TaskName>`.
   For example, a task named "Validate Order" in `order_processing.bpmn` within
-  app `MyApp` is expected at `MyApp.Bpmn.OrderProcessing.Handlers.ValidateOrder`.
+  app `MyApp` is expected at `MyApp.Workflow.OrderProcessing.Handlers.ValidateOrder`.
+
+  The namespace segment (default `"Workflow"`) is configurable via:
+
+      config :rodar_bpmn, :scaffold_namespace, "Workflow"
 
   Discovery verifies each module:
     * Exists on the BEAM (`Code.ensure_loaded/1`)
@@ -39,7 +43,7 @@ defmodule RodarBpmn.Scaffold.Discovery do
   ## Direct Usage
 
       result = Discovery.discover(diagram,
-        module_prefix: "MyApp.Bpmn.OrderProcessing.Handlers"
+        module_prefix: "MyApp.Workflow.OrderProcessing.Handlers"
       )
       diagram = Discovery.apply_handlers(diagram, result.handler_map)
       Discovery.register_discovered(result)
@@ -65,7 +69,7 @@ defmodule RodarBpmn.Scaffold.Discovery do
   ## Options
 
     * `:module_prefix` (required) — the fully-qualified module prefix
-      (e.g., `"MyApp.Bpmn.OrderProcessing.Handlers"`)
+      (e.g., `"MyApp.Workflow.OrderProcessing.Handlers"`)
 
   Returns a map with three keys:
 
