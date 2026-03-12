@@ -6,6 +6,14 @@ defmodule RodarBpmn.Activity.Task.Script do
   and content come from the element's attributes. Results are written back
   to the context under the task's `:output_variable` (defaults to `:script_result`).
 
+  ## Language Resolution
+
+  The script language is resolved from element attributes in this order:
+
+  1. `:type` — legacy/explicit attribute (e.g., `type: "elixir"`)
+  2. `:scriptFormat` — standard BPMN 2.0 attribute (e.g., `scriptFormat="feel"`)
+  3. Defaults to `"elixir"` when neither is present
+
   ## Supported Languages
 
   - `"elixir"` -- sandboxed AST evaluation via `RodarBpmn.Expression.Sandbox`
@@ -62,13 +70,15 @@ defmodule RodarBpmn.Activity.Task.Script do
   """
   @spec execute(RodarBpmn.element(), RodarBpmn.context()) :: RodarBpmn.result()
   def execute(
-        {:bpmn_activity_task_script, %{outgoing: outgoing, type: type, script: script} = attrs},
+        {:bpmn_activity_task_script, %{outgoing: outgoing, script: script} = attrs},
         context
-      ) do
+      )
+      when not is_nil(script) do
     data = Context.get(context, :data)
+    lang = script_language(attrs)
     output_var = Map.get(attrs, :output_variable, :script_result)
 
-    case run_script(type, script, data) do
+    case run_script(lang, script, data) do
       {:ok, result} ->
         Context.put_data(context, output_var, result)
         token_out(outgoing, context)
@@ -79,6 +89,10 @@ defmodule RodarBpmn.Activity.Task.Script do
   end
 
   def execute(_elem, _context), do: {:not_implemented}
+
+  defp script_language(attrs) do
+    Map.get(attrs, :type) || Map.get(attrs, :scriptFormat, "elixir")
+  end
 
   defp token_out(targets, context), do: RodarBpmn.release_token(targets, context)
 

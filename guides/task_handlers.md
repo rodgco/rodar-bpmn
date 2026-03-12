@@ -140,11 +140,70 @@ RodarBpmn.TaskRegistry.register("Task_check_inventory", MyApp.CheckInventory)
 
 The service task module looks up the task ID in the `TaskRegistry` when no inline `:handler` attribute is present.
 
+### Convention-Based Auto-Discovery
+
+When you scaffold handlers with `mix rodar_bpmn.scaffold`, modules are placed at predictable paths (e.g., `MyApp.Bpmn.OrderProcessing.Handlers.ValidateOrder`). The engine can auto-discover these handlers when you provide the `:bpmn_file` and `:app_name` options to `Diagram.load/2`:
+
+```elixir
+# Discovery is ON by default when bpmn_file + app_name are provided
+diagram = RodarBpmn.Engine.Diagram.load(xml,
+  bpmn_file: "order_processing.bpmn",
+  app_name: "MyApp"
+)
+
+# Discovered service task handlers are automatically injected.
+# The discovery result is available for inspection:
+diagram.discovery
+# => %{
+#   handler_map: %{"Task_1" => MyApp.Bpmn.OrderProcessing.Handlers.ValidateOrder},
+#   task_registry_entries: [{"Task_2", MyApp.Bpmn.OrderProcessing.Handlers.ApproveOrder}],
+#   not_found: ["Task_3"]
+# }
+```
+
+Discovery checks each task for a module at the expected namespace and verifies it implements the correct callback (`execute/2` for service tasks, `token_in/2` for others).
+
+You can mix explicit `handler_map` entries with discovery — explicit entries always win for overlapping task IDs:
+
+```elixir
+diagram = RodarBpmn.Engine.Diagram.load(xml,
+  bpmn_file: "order.bpmn",
+  app_name: "MyApp",
+  handler_map: %{"Task_1" => MyApp.CustomOverride}
+)
+```
+
+To disable discovery, set `discover_handlers: false`:
+
+```elixir
+diagram = RodarBpmn.Engine.Diagram.load(xml,
+  bpmn_file: "order.bpmn",
+  app_name: "MyApp",
+  discover_handlers: false
+)
+```
+
+For non-service task handlers (user, send, receive, manual), discovery returns them in `task_registry_entries`. Register them with:
+
+```elixir
+RodarBpmn.Scaffold.Discovery.register_discovered(diagram.discovery)
+```
+
+You can also use the `Discovery` module directly for programmatic discovery without `Diagram.load/2`:
+
+```elixir
+alias RodarBpmn.Scaffold.Discovery
+
+result = Discovery.discover(diagram, module_prefix: "MyApp.Bpmn.OrderProcessing.Handlers")
+diagram = Discovery.apply_handlers(diagram, result.handler_map)
+Discovery.register_discovered(result)
+```
+
 ### Handler Resolution Priority
 
 When a service task executes, the handler is resolved in this order:
 
-1. **Inline `:handler` attribute** -- if the element has a `:handler` key (set by `Diagram.load/2` `:handler_map` or manual injection), that module is used directly.
+1. **Inline `:handler` attribute** -- if the element has a `:handler` key (set by `Diagram.load/2` `:handler_map` or convention discovery), that module is used directly.
 2. **`RodarBpmn.TaskRegistry` lookup** -- the task's `:id` is looked up in the registry. This works for both service-task-specific registrations and general type registrations.
 3. **Fallback** -- if neither source provides a handler, `{:not_implemented}` is returned.
 

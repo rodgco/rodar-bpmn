@@ -107,7 +107,7 @@ Register your engine at application startup so it is available before any proces
 RodarBpmn.Expression.ScriptRegistry.register("lua", MyApp.LuaEngine)
 ```
 
-Once registered, any BPMN script task with `type: "lua"` will delegate to your engine:
+Once registered, any BPMN script task with `scriptFormat="lua"` will delegate to your engine:
 
 ```xml
 <scriptTask id="Task_1" scriptFormat="lua">
@@ -136,9 +136,15 @@ Ready-made engine packages are planned:
 - `rodar_bpmn_lua` -- Lua scripting via Luerl
 - `rodar_bpmn_python` -- Python scripting via Erlport
 
-### Dispatch Order
+### Language Resolution
 
-When a script task executes, the language is resolved in this order:
+The script language is resolved from the element's attributes:
+
+1. `:type` attribute (legacy/explicit)
+2. `:scriptFormat` attribute (standard BPMN 2.0, e.g., `<scriptTask scriptFormat="feel">`)
+3. Defaults to `"elixir"` when neither is present
+
+Once the language is determined, execution is dispatched to:
 
 1. `"elixir"` -- built-in sandboxed Elixir evaluator
 2. `"feel"` -- built-in FEEL evaluator

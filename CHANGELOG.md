@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `mix rodar_bpmn.scaffold` mix task — generates handler module stubs from a BPMN file with correct behaviours and callbacks
 - `RodarBpmn.Scaffold` module — core scaffolding logic for task extraction and handler code generation
+- `RodarBpmn.Scaffold.Discovery` module — convention-based handler auto-discovery at `<AppName>.Bpmn.<BpmnFilename>.Handlers.<TaskName>` paths
+- `Scaffold.bpmn_base_name/1` and `Scaffold.default_module_prefix/2` — shared naming helpers for scaffold and discovery
+- `Diagram.load/2` now accepts `:bpmn_file`, `:app_name`, and `:discover_handlers` options for automatic handler discovery at parse time
+- `mix rodar_bpmn.run` automatically discovers scaffolded handlers and prints discovered vs passthrough status
+
+### Changed
+
+- `mix rodar_bpmn.run` hook output now prints each node's own result instead of propagated downstream results — nodes that forwarded the token show `[OK]` even when a later node fails
+- Handler convention path changed from `Bpmn.Handlers.<File>` to `Bpmn.<File>.Handlers` (folder: `bpmn/<file>/handlers/`)
+
+### Fixed
+
+- Script task language resolution now checks `:scriptFormat` attribute (standard BPMN 2.0) in addition to `:type`, defaulting to `"elixir"` when neither is present — script tasks no longer return `{:not_implemented}` when only `scriptFormat` is set
 
 ## [1.3.0] - 2026-03-12
 

@@ -154,6 +154,27 @@ defmodule RodarBpmn.ScaffoldTest do
     end
   end
 
+  describe "bpmn_base_name/1" do
+    test "converts file path to PascalCase name" do
+      assert Scaffold.bpmn_base_name("path/to/order_processing.bpmn") == "OrderProcessing"
+    end
+
+    test "handles .bpmn2 extension" do
+      assert Scaffold.bpmn_base_name("my-workflow.bpmn2") == "MyWorkflow"
+    end
+
+    test "handles bare filename" do
+      assert Scaffold.bpmn_base_name("simple.bpmn") == "Simple"
+    end
+  end
+
+  describe "default_module_prefix/2" do
+    test "builds prefix from app name and bpmn name" do
+      assert Scaffold.default_module_prefix("MyApp", "OrderProcessing") ==
+               "MyApp.Bpmn.OrderProcessing.Handlers"
+    end
+  end
+
   describe "registration_type/1" do
     test "service tasks use handler_map" do
       assert Scaffold.registration_type(:bpmn_activity_task_service) == :handler_map

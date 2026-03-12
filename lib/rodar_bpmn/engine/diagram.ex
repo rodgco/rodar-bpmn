@@ -24,6 +24,12 @@ defmodule RodarBpmn.Engine.Diagram do
   option injects handler modules into service task elements, enabling handler
   wiring at parse time instead of at runtime via `RodarBpmn.TaskRegistry`.
 
+  When `:bpmn_file` and `:app_name` are provided, convention-based handler
+  auto-discovery is enabled by default. Discovered handlers are merged with
+  any explicit `:handler_map` (explicit entries win). Set `discover_handlers: false`
+  to disable. The discovery result is stored under the `:discovery` key in the
+  returned map.
+
   ## See Also
 
   - `RodarBpmn.Lane` -- lane assignment queries
@@ -47,6 +53,8 @@ defmodule RodarBpmn.Engine.Diagram do
 
   """
 
+  alias RodarBpmn.Scaffold.Discovery
+
   @doc """
   Parses a BPMN 2.0 XML string into Elixir data structures.
   """
@@ -65,6 +73,17 @@ defmodule RodarBpmn.Engine.Diagram do
       service task whose `id` appears as a key in the map, the corresponding
       module is injected as the `:handler` attribute. This allows wiring service
       task handlers at parse time rather than at runtime via `RodarBpmn.TaskRegistry`.
+    * `:bpmn_file` — the BPMN file path (e.g., `"order_processing.bpmn"`). When
+      present together with `:app_name`, triggers convention-based handler
+      auto-discovery.
+    * `:app_name` — the PascalCase application name (e.g., `"MyApp"`). Required
+      for auto-discovery.
+    * `:discover_handlers` — boolean, defaults to `true`. Set to `false` to
+      disable auto-discovery even when `:bpmn_file` and `:app_name` are provided.
+
+  When discovery is active, discovered service task handlers are merged with any
+  explicit `:handler_map` (explicit entries take precedence). The discovery result
+  is stored under the `:discovery` key in the returned map.
 
   ## Examples
 
@@ -94,9 +113,41 @@ defmodule RodarBpmn.Engine.Diagram do
   defdelegate export(diagram), to: RodarBpmn.Engine.Diagram.Export, as: :to_xml
 
   defp apply_opts(result, opts) do
-    case Keyword.get(opts, :handler_map) do
-      nil -> result
-      handler_map when is_map(handler_map) -> inject_handlers(result, handler_map)
+    {result, discovery} = maybe_discover(result, opts)
+    explicit_map = Keyword.get(opts, :handler_map, %{})
+
+    merged_map =
+      case discovery do
+        nil -> explicit_map
+        %{handler_map: discovered} -> Map.merge(discovered, explicit_map)
+      end
+
+    result =
+      if merged_map == %{} do
+        result
+      else
+        inject_handlers(result, merged_map)
+      end
+
+    if discovery do
+      Map.put(result, :discovery, discovery)
+    else
+      result
+    end
+  end
+
+  defp maybe_discover(result, opts) do
+    bpmn_file = Keyword.get(opts, :bpmn_file)
+    app_name = Keyword.get(opts, :app_name)
+    discover? = Keyword.get(opts, :discover_handlers, true)
+
+    if bpmn_file && app_name && discover? do
+      discovery =
+        Discovery.discover_from_file(result, bpmn_file, app_name: app_name)
+
+      {result, discovery}
+    else
+      {result, nil}
     end
   end
 

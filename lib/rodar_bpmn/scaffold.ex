@@ -4,9 +4,25 @@ defmodule RodarBpmn.Scaffold do
 
   Extracts actionable tasks from parsed BPMN diagrams and generates
   handler module source code with the correct behaviour and callbacks.
+  Service tasks get `RodarBpmn.Activity.Task.Service.Handler` with `execute/2`,
+  while all other task types get `RodarBpmn.TaskHandler` with `token_in/2`.
 
-  This module contains pure functions that are used by
-  `Mix.Tasks.RodarBpmn.Scaffold` and are independently testable.
+  This module also provides naming conventions used by both the scaffold Mix
+  task and the convention-based auto-discovery system (`RodarBpmn.Scaffold.Discovery`):
+
+    * `bpmn_base_name/1` — derives a PascalCase name from a BPMN file path
+    * `default_module_prefix/2` — builds the canonical handler namespace
+      (e.g., `"MyApp.Bpmn.OrderProcessing.Handlers"`)
+    * `module_name_from_element/1` — converts a task name or ID to PascalCase
+
+  Together these establish the convention: a handler for task "Validate Order"
+  in `order_processing.bpmn` within app `MyApp` lives at
+  `MyApp.Bpmn.OrderProcessing.Handlers.ValidateOrder`.
+
+  ## See Also
+
+    * `Mix.Tasks.RodarBpmn.Scaffold` — CLI entry point for handler generation
+    * `RodarBpmn.Scaffold.Discovery` — auto-discovers handlers at conventional paths
   """
 
   @task_types [
@@ -141,6 +157,43 @@ defmodule RodarBpmn.Scaffold do
   @spec registration_type(atom()) :: :handler_map | :task_registry
   def registration_type(:bpmn_activity_task_service), do: :handler_map
   def registration_type(_), do: :task_registry
+
+  @doc """
+  Derives a PascalCase base name from a BPMN file path.
+
+  Strips the directory and extension, then converts to PascalCase using
+  `module_name_from_element/1`.
+
+  ## Examples
+
+      iex> RodarBpmn.Scaffold.bpmn_base_name("path/to/order_processing.bpmn")
+      "OrderProcessing"
+
+      iex> RodarBpmn.Scaffold.bpmn_base_name("my-workflow.bpmn2")
+      "MyWorkflow"
+
+  """
+  @spec bpmn_base_name(String.t()) :: String.t()
+  def bpmn_base_name(file_path) do
+    file_path
+    |> Path.basename()
+    |> Path.rootname()
+    |> module_name_from_element()
+  end
+
+  @doc """
+  Builds the default handler module prefix from an app name and BPMN base name.
+
+  ## Examples
+
+      iex> RodarBpmn.Scaffold.default_module_prefix("MyApp", "OrderProcessing")
+      "MyApp.Bpmn.OrderProcessing.Handlers"
+
+  """
+  @spec default_module_prefix(String.t(), String.t()) :: String.t()
+  def default_module_prefix(app_name, bpmn_name) do
+    "#{app_name}.Bpmn.#{bpmn_name}.Handlers"
+  end
 
   # --- Private ---
 

@@ -173,19 +173,31 @@ defmodule MyApp.CheckInventory do
 end
 ```
 
-Wire handlers at parse time with `handler_map`, or at runtime via the `TaskRegistry`:
+Wire handlers at parse time with `handler_map`, at runtime via `TaskRegistry`, or let convention-based discovery find them automatically:
 
 ```elixir
-# Option 1: Inject at parse time
+# Option 1: Convention-based auto-discovery (recommended)
+# After scaffolding handlers with `mix rodar_bpmn.scaffold`, load with discovery:
+diagram = RodarBpmn.Engine.Diagram.load(xml,
+  bpmn_file: "order_processing.bpmn",
+  app_name: "MyApp"
+)
+# Discovers MyApp.Bpmn.OrderProcessing.Handlers.CheckInventory automatically
+
+# Option 2: Inject at parse time with explicit handler_map
 diagram = RodarBpmn.Engine.Diagram.load(xml, handler_map: %{
   "Task_check" => MyApp.CheckInventory
 })
 
-# Option 2: Register at runtime (looked up by task ID)
+# Option 3: Register at runtime (looked up by task ID)
 RodarBpmn.TaskRegistry.register("Task_check", MyApp.CheckInventory)
 ```
 
-Handler resolution priority: inline `:handler` attribute first, then `TaskRegistry` lookup by task ID, then `{:not_implemented}` fallback.
+Handler resolution priority:
+1. Explicit `:handler` attribute (from `handler_map`) — always wins
+2. Convention discovery (module at scaffold path with correct behaviour)
+3. `TaskRegistry` lookup by task ID
+4. `{:not_implemented}` fallback
 
 ## Supported BPMN Elements
 
@@ -305,7 +317,7 @@ The engine uses a **token-based execution model**. A `RodarBpmn.Token` struct tr
 - **`RodarBpmn.Expression`** — Evaluates condition expressions on sequence flows. Routes to the Elixir sandbox or FEEL evaluator based on language.
 - **`RodarBpmn.Expression.Sandbox`** — AST-restricted Elixir expression evaluator (replaces `Code.eval_string`).
 - **`RodarBpmn.Expression.Feel`** — FEEL (Friendly Enough Expression Language) evaluator. NimbleParsec-based parser with null propagation, three-valued boolean logic, and built-in functions.
-- **`RodarBpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`. Extracts lane sets into process attrs (`:lane_set`). `load/2` accepts a `:handler_map` option to inject service task handlers at parse time.
+- **`RodarBpmn.Engine.Diagram`** — Parses BPMN 2.0 XML via `erlsom`. Extracts lane sets into process attrs (`:lane_set`). `load/2` accepts `:handler_map`, `:bpmn_file`, `:app_name`, and `:discover_handlers` options. When `:bpmn_file` and `:app_name` are provided, convention-based handler auto-discovery is enabled by default.
 - **`RodarBpmn.Event.Bus`** — Registry-based pub/sub for BPMN events (message, signal, escalation).
 - **`RodarBpmn.Event.Timer`** — ISO 8601 duration parsing and timer scheduling.
 - **`RodarBpmn.Telemetry`** — Telemetry event definitions and helpers; wraps node execution with `:telemetry.span/3`.
@@ -474,6 +486,8 @@ mix rodar_bpmn.scaffold path/to/order.bpmn --force              # Overwrite exis
 ```
 
 Generates one module per task with the correct behaviour (`RodarBpmn.Activity.Task.Service.Handler` for service tasks, `RodarBpmn.TaskHandler` for all others) and prints registration instructions.
+
+Scaffolded handlers are placed at deterministic paths (e.g., `MyApp.Bpmn.Order.Handlers.ValidateOrder`), enabling convention-based auto-discovery when loading with `Diagram.load/2` using `:bpmn_file` and `:app_name` options — no manual wiring required.
 
 ## Development
 

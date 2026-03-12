@@ -19,8 +19,8 @@ defmodule Mix.Tasks.RodarBpmn.Scaffold do
 
   ## Defaults
 
-    * Output dir: `lib/<app_name>/bpmn/handlers/<bpmn_filename>/`
-    * Module prefix: `<AppName>.Bpmn.Handlers.<BpmnFilename>`
+    * Output dir: `lib/<app_name>/bpmn/<bpmn_filename>/handlers/`
+    * Module prefix: `<AppName>.Bpmn.<BpmnFilename>.Handlers`
   """
 
   use Mix.Task
@@ -241,25 +241,20 @@ defmodule Mix.Tasks.RodarBpmn.Scaffold do
     Mix.shell().info("}")
   end
 
-  defp bpmn_base_name(file_path) do
-    file_path
-    |> Path.basename()
-    |> Path.rootname()
-    |> Scaffold.module_name_from_element()
-  end
+  defp bpmn_base_name(file_path), do: Scaffold.bpmn_base_name(file_path)
 
   defp app_name do
     Mix.Project.config()[:app] |> Atom.to_string() |> Macro.camelize()
   end
 
   defp default_module_prefix(app_name, bpmn_name) do
-    "#{app_name}.Bpmn.Handlers.#{bpmn_name}"
+    Scaffold.default_module_prefix(app_name, bpmn_name)
   end
 
   defp default_output_dir(app_name, bpmn_name) do
     snake_app = Macro.underscore(app_name)
     snake_bpmn = Macro.underscore(bpmn_name)
-    Path.join(["lib", snake_app, "bpmn", "handlers", snake_bpmn])
+    Path.join(["lib", snake_app, "bpmn", snake_bpmn, "handlers"])
   end
 
   defp result_module_name(%{action: :kept_both} = r, _module_name, _prefix) do
