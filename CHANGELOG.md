@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Project renamed from `rodar_bpmn` to `rodar`** — package is now `:rodar`, modules use `Rodar.*`, config uses `config :rodar`, mix tasks are `mix rodar.*`, telemetry events use `[:rodar, ...]`. BPMN notation atoms (`:bpmn_*`) unchanged.
 - `mix rodar.run` hook output now prints each node's own result instead of propagated downstream results — nodes that forwarded the token show `[OK]` even when a later node fails
 - Handler convention path changed from `Bpmn.Handlers.<File>` to `Workflow.<File>.Handlers` (folder: `workflow/<file>/handlers/`), with namespace configurable via `config :rodar, :scaffold_namespace`
 
