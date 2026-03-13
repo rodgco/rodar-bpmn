@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="parallel-fulfillment" name="Parallel Fulfillment" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Confirmed">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:parallelGateway id="GW_Fork" name="Start Fulfillment">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Pack</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Invoice</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_Pack" name="Pack Items">
+      <bpmn:incoming>Flow_Pack</bpmn:incoming>
+      <bpmn:outgoing>Flow_Pack_Done</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Invoice" name="Generate Invoice">
+      <bpmn:incoming>Flow_Invoice</bpmn:incoming>
+      <bpmn:outgoing>Flow_Invoice_Done</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="GW_Join" name="All Done">
+      <bpmn:incoming>Flow_Pack_Done</bpmn:incoming>
+      <bpmn:incoming>Flow_Invoice_Done</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ship</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_Ship" name="Ship Order">
+      <bpmn:incoming>Flow_Ship</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Order Shipped">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="GW_Fork" />
+    <bpmn:sequenceFlow id="Flow_Pack" sourceRef="GW_Fork" targetRef="Task_Pack" />
+    <bpmn:sequenceFlow id="Flow_Invoice" sourceRef="GW_Fork" targetRef="Task_Invoice" />
+    <bpmn:sequenceFlow id="Flow_Pack_Done" sourceRef="Task_Pack" targetRef="GW_Join" />
+    <bpmn:sequenceFlow id="Flow_Invoice_Done" sourceRef="Task_Invoice" targetRef="GW_Join" />
+    <bpmn:sequenceFlow id="Flow_Ship" sourceRef="GW_Join" targetRef="Task_Ship" />
+    <bpmn:sequenceFlow id="Flow_End" sourceRef="Task_Ship" targetRef="End_1" />
+  </bpmn:process>
+</bpmn:definitions>

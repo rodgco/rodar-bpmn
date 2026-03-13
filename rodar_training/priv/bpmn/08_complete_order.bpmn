@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="complete-order" name="Complete Order Process" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Placed">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_ValidateOrder" name="Validate Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_Valid" name="Order Valid?" default="Flow_Invalid">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Valid</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Invalid</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_CheckInventory" name="Check Inventory">
+      <bpmn:incoming>Flow_Valid</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_Stock" name="In Stock?" default="Flow_OutOfStock">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_InStock</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OutOfStock</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_ManagerApproval" name="Manager Approval">
+      <bpmn:incoming>Flow_InStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Approved" name="Approved?" default="Flow_Denied">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Denied</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:parallelGateway id="GW_Fork" name="Start Fulfillment">
+      <bpmn:incoming>Flow_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Charge</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PackShip</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_ChargePayment" name="Charge Payment">
+      <bpmn:incoming>Flow_Charge</bpmn:incoming>
+      <bpmn:outgoing>Flow_Charge_Done</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_PackAndShip" name="Pack And Ship">
+      <bpmn:incoming>Flow_PackShip</bpmn:incoming>
+      <bpmn:outgoing>Flow_PackShip_Done</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="GW_Join" name="Fulfillment Complete">
+      <bpmn:incoming>Flow_Charge_Done</bpmn:incoming>
+      <bpmn:incoming>Flow_PackShip_Done</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_SendConfirmation" name="Send Confirmation">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_Success</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Success" name="Order Fulfilled">
+      <bpmn:incoming>Flow_Success</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Invalid" name="Invalid Order">
+      <bpmn:incoming>Flow_Invalid</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_OutOfStock" name="Out Of Stock">
+      <bpmn:incoming>Flow_OutOfStock</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Denied" name="Order Denied">
+      <bpmn:incoming>Flow_Denied</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_ValidateOrder" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_ValidateOrder" targetRef="GW_Valid" />
+    <bpmn:sequenceFlow id="Flow_Valid" sourceRef="GW_Valid" targetRef="Task_CheckInventory">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="elixir">data["valid"] == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Invalid" sourceRef="GW_Valid" targetRef="End_Invalid" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_CheckInventory" targetRef="GW_Stock" />
+    <bpmn:sequenceFlow id="Flow_InStock" sourceRef="GW_Stock" targetRef="Task_ManagerApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="elixir">data["in_stock"] == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OutOfStock" sourceRef="GW_Stock" targetRef="End_OutOfStock" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_ManagerApproval" targetRef="GW_Approved" />
+    <bpmn:sequenceFlow id="Flow_Approved" sourceRef="GW_Approved" targetRef="GW_Fork">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="elixir">data["approved"] == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Denied" sourceRef="GW_Approved" targetRef="End_Denied" />
+    <bpmn:sequenceFlow id="Flow_Charge" sourceRef="GW_Fork" targetRef="Task_ChargePayment" />
+    <bpmn:sequenceFlow id="Flow_PackShip" sourceRef="GW_Fork" targetRef="Task_PackAndShip" />
+    <bpmn:sequenceFlow id="Flow_Charge_Done" sourceRef="Task_ChargePayment" targetRef="GW_Join" />
+    <bpmn:sequenceFlow id="Flow_PackShip_Done" sourceRef="Task_PackAndShip" targetRef="GW_Join" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="GW_Join" targetRef="Task_SendConfirmation" />
+    <bpmn:sequenceFlow id="Flow_Success" sourceRef="Task_SendConfirmation" targetRef="End_Success" />
+  </bpmn:process>
+</bpmn:definitions>
