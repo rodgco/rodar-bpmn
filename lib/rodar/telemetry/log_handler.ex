@@ -31,7 +31,7 @@ defmodule Rodar.Telemetry.LogHandler do
     :telemetry.attach_many(
       @handler_id,
       Rodar.Telemetry.events(),
-      &handle_event/4,
+      &__MODULE__.handle_event/4,
       nil
     )
   end
