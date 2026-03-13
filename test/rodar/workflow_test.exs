@@ -30,12 +30,16 @@ defmodule Rodar.WorkflowTest do
       assert {:ok, _} = Rodar.Registry.lookup(id)
     end
 
-    test "returns error for missing file" do
-      assert {:error, :enoent} =
+    test "returns descriptive error for missing file" do
+      assert {:error, message} =
                Workflow.setup(
                  bpmn_file: "nonexistent.bpmn",
                  process_id: "nope"
                )
+
+      assert message =~ "Could not read BPMN file"
+      assert message =~ "nonexistent.bpmn"
+      assert message =~ ":enoent"
     end
   end
 

@@ -292,12 +292,12 @@ defmodule Rodar do
       :error ->
         case TaskRegistry.lookup(type) do
           {:ok, handler} -> handler.token_in(elem, context)
-          :error -> nil
+          :error -> {:not_implemented}
         end
     end
   end
 
-  defp dispatch(_elem, _context), do: nil
+  defp dispatch(_elem, _context), do: {:not_implemented}
 
   @activity_types [
     :bpmn_activity_task_user,

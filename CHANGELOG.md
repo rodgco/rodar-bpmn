@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `Rodar.dispatch/2` catch-all clauses now return `{:not_implemented}` instead of `nil` for unknown element types
+- `Rodar.Workflow.setup/1` wraps `File.read` errors with descriptive messages including the file path
+- `Rodar.Workflow.Server` `init/1` wraps setup failures as `{:workflow_setup_failed, reason}` for clearer error origins
+- `Rodar.Workflow.Server.complete_task/3` now propagates errors from `resume_user_task` instead of silently discarding them
+
 ### Changed
 
 - Upgraded MIWG conformance test suite to the 2025 release (21 reference files, up from 5)

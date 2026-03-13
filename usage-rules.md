@@ -620,6 +620,55 @@ MyApp.OrderManager.start_link()
 # => May fail if Rodar.Application hasn't started
 ```
 
+## Error Handling
+
+The engine uses tagged tuples consistently for errors. Unknown element types
+return `{:not_implemented}` (not `nil`), file errors include the path, and
+setup failures are wrapped with context.
+
+```elixir
+# GOOD: Handle {:not_implemented} from dispatch for unknown elements
+result = Rodar.execute({:my_custom_type, %{id: "task_1"}}, context)
+case result do
+  {:ok, context} -> :success
+  {:error, msg} -> Logger.error(msg)
+  {:not_implemented} -> Logger.warning("No handler for element")
+end
+
+# GOOD: Handle Workflow.setup errors — they include the file path
+case Rodar.Workflow.setup(bpmn_file: path, process_id: id) do
+  {:ok, diagram} -> diagram
+  {:error, msg} when is_binary(msg) -> Logger.error(msg)
+  # e.g. "Could not read BPMN file 'missing.bpmn': :enoent"
+end
+
+# GOOD: Handle complete_task errors — they propagate from resume_user_task
+case MyApp.OrderManager.complete_task(instance_id, task_id, input) do
+  {:ok, updated} -> updated
+  {:error, :not_found} -> :unknown_instance
+  {:error, msg} when is_binary(msg) -> Logger.error(msg)
+  # e.g. "Task 'Bad_Id' not found in process"
+end
+
+# GOOD: Handle Workflow.Server init failure
+case MyApp.OrderManager.start_link() do
+  {:ok, pid} -> pid
+  {:error, {:workflow_setup_failed, reason}} -> Logger.error("Setup failed: #{reason}")
+end
+
+# BAD: Assuming dispatch returns nil for unknown elements
+result = Rodar.execute({:unknown, %{id: "x"}}, context)
+if result == nil, do: :no_handler  # Wrong — returns {:not_implemented} now
+
+# BAD: Pattern-matching on raw :enoent from Workflow.setup
+{:error, :enoent} = Rodar.Workflow.setup(bpmn_file: "bad.bpmn", process_id: "x")
+# Wrong — errors are now descriptive strings, not bare atoms
+
+# BAD: Ignoring complete_task result — errors are now propagated
+MyApp.OrderManager.complete_task(1, "Wrong_Task", %{})
+# Returns {:error, "Task 'Wrong_Task' not found in process"} — handle it!
+```
+
 ## Lanes (Role/Group Assignment)
 
 Lanes are structural metadata that assign flow nodes to roles, groups, or

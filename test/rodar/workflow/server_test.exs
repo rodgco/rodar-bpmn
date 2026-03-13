@@ -50,6 +50,16 @@ defmodule Rodar.Workflow.ServerTest do
     end
   end
 
+  defmodule BadPathServer do
+    use Rodar.Workflow.Server,
+      bpmn_file: "nonexistent_file.bpmn",
+      process_id: "bad-path-process",
+      app_name: nil
+
+    @impl Rodar.Workflow.Server
+    def init_data(_params, _instance_id), do: %{}
+  end
+
   describe "start_link/1" do
     test "starts the server and loads BPMN" do
       assert {:ok, pid} = TestServer.start_link()
@@ -61,6 +71,14 @@ defmodule Rodar.Workflow.ServerTest do
       assert {:ok, pid} = TestServer.start_link(name: :custom_server_name)
       assert GenServer.whereis(:custom_server_name) == pid
       GenServer.stop(pid)
+    end
+
+    test "wraps setup failure reason with :workflow_setup_failed" do
+      Process.flag(:trap_exit, true)
+      result = BadPathServer.start_link(name: :bad_path_server_test)
+      assert {:error, {:workflow_setup_failed, message}} = result
+      assert message =~ "Could not read BPMN file"
+      Process.flag(:trap_exit, false)
     end
   end
 
@@ -109,6 +127,24 @@ defmodule Rodar.Workflow.ServerTest do
       {:ok, _} = TestServer.start_link()
 
       assert {:error, :not_found} = TestServer.complete_task(999, "Task_Approval", %{})
+    end
+  end
+
+  describe "complete_task/3 error propagation" do
+    test "returns error for non-existent task ID" do
+      {:ok, _} = TestServer.start_link()
+      {:ok, instance} = TestServer.create_instance()
+
+      assert {:error, msg} = TestServer.complete_task(instance.id, "Nonexistent", %{})
+      assert msg =~ "not found in process"
+    end
+
+    test "returns error for non-user task" do
+      {:ok, _} = TestServer.start_link()
+      {:ok, instance} = TestServer.create_instance()
+
+      assert {:error, msg} = TestServer.complete_task(instance.id, "Gateway_1", %{})
+      assert msg =~ "not a user task"
     end
   end
 

@@ -54,6 +54,7 @@ defmodule Rodar.Workflow do
     * `:app_name` — PascalCase application name for handler auto-discovery
 
   Returns `{:ok, diagram}` on success, `{:error, reason}` on failure.
+  File-not-found errors include the file path in the message for easier debugging.
   """
   @spec setup(keyword()) :: {:ok, map()} | {:error, any()}
   def setup(opts) do
@@ -64,7 +65,7 @@ defmodule Rodar.Workflow do
 
     path = resolve_path(bpmn_file, otp_app)
 
-    with {:ok, xml} <- File.read(path),
+    with {:ok, xml} <- read_bpmn_file(path),
          diagram <- load_diagram(xml, bpmn_file, app_name),
          :ok <- register_definition(diagram, process_id),
          :ok <- register_handlers(diagram) do
@@ -175,6 +176,13 @@ defmodule Rodar.Workflow do
   end
 
   # --- Private ---
+
+  defp read_bpmn_file(path) do
+    case File.read(path) do
+      {:ok, xml} -> {:ok, xml}
+      {:error, reason} -> {:error, "Could not read BPMN file '#{path}': #{inspect(reason)}"}
+    end
+  end
 
   defp resolve_path(bpmn_file, nil), do: bpmn_file
 

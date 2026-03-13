@@ -50,6 +50,14 @@ defmodule Rodar.Workflow.Server do
 
   All workflow GenServer messages use `{:__workflow__, action, ...}` tuple tags
   to avoid collisions with user-defined `handle_call` clauses.
+
+  ## Error Handling
+
+    * If `setup/0` fails during `init/1`, the server returns
+      `{:stop, {:workflow_setup_failed, reason}}` — the wrapper makes it clear
+      the error originated from workflow setup rather than a generic init failure.
+    * `complete_task/3` propagates errors from `Rodar.Workflow.resume_user_task/3`
+      (e.g., wrong task ID, non-user task) instead of silently discarding them.
   """
 
   @doc """
@@ -124,7 +132,7 @@ defmodule Rodar.Workflow.Server do
             {:ok, %{instances: %{}, counter: 0}}
 
           {:error, reason} ->
-            {:stop, reason}
+            {:stop, {:workflow_setup_failed, reason}}
         end
       end
 
@@ -163,13 +171,18 @@ defmodule Rodar.Workflow.Server do
           ) do
         case Map.fetch(state.instances, instance_id) do
           {:ok, instance} ->
-            _result = Rodar.Workflow.resume_user_task(instance.process_pid, task_id, input)
-            status = Rodar.Workflow.process_status(instance.process_pid)
-            mapped = unquote(__MODULE__).__apply_map_status__(__MODULE__, status)
+            case Rodar.Workflow.resume_user_task(instance.process_pid, task_id, input) do
+              {:error, _} = error ->
+                {:reply, error, state}
 
-            updated = %{instance | status: mapped}
-            instances = Map.put(state.instances, instance_id, updated)
-            {:reply, {:ok, updated}, %{state | instances: instances}}
+              _result ->
+                status = Rodar.Workflow.process_status(instance.process_pid)
+                mapped = unquote(__MODULE__).__apply_map_status__(__MODULE__, status)
+
+                updated = %{instance | status: mapped}
+                instances = Map.put(state.instances, instance_id, updated)
+                {:reply, {:ok, updated}, %{state | instances: instances}}
+            end
 
           :error ->
             {:reply, {:error, :not_found}, state}

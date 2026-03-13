@@ -83,14 +83,12 @@ defmodule Rodar.TaskHandlerTest do
   end
 
   describe "unregistered types" do
-    test "unregistered types return nil (existing behavior)" do
+    test "unregistered types return {:not_implemented}" do
       process = build_process(:totally_unknown, "unknown_task")
       {:ok, context} = Rodar.Context.start_link(process, %{})
 
-      # Dispatch directly — should return nil for unknown type
       result = Rodar.execute({:totally_unknown, %{id: "unknown_task"}}, context)
-      # nil result from dispatch means no handler matched
-      assert result == nil
+      assert result == {:not_implemented}
     end
   end
 end
