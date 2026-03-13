@@ -471,6 +471,30 @@ diagram = Rodar.Engine.Diagram.load(xml, bpmn_file: "f.bpmn", app_name: "MyApp")
 # Discovery.register_discovered(diagram.discovery)  # Don't forget this!
 ```
 
+### Subprocess Handler Discovery
+
+Discovery is recursive — tasks inside embedded subprocesses are discovered
+using the same naming convention as top-level tasks. A service task named
+"Check Stock" inside a subprocess is expected at
+`MyApp.Workflow.OrderProcessing.Handlers.CheckStock`, just like a top-level task.
+This works at any nesting depth (subprocesses within subprocesses).
+
+```elixir
+# GOOD: Handlers inside subprocesses are discovered automatically
+# No extra configuration needed — just scaffold and load
+# $ mix rodar.scaffold order_processing.bpmn
+diagram = Rodar.Engine.Diagram.load(xml,
+  bpmn_file: "order_processing.bpmn",
+  app_name: "MyApp"
+)
+# Tasks inside subprocesses appear in diagram.discovery alongside top-level tasks
+
+# BAD: Assuming subprocess tasks need a different namespace
+# Subprocess tasks use the SAME handler namespace as top-level tasks
+# MyApp.Workflow.OrderProcessing.Handlers.CheckStock  (correct)
+# MyApp.Workflow.OrderProcessing.Handlers.Sub1.CheckStock  (wrong — no subprocess nesting in module path)
+```
+
 ## Workflow DSL
 
 The Workflow modules provide two layers of abstraction over the low-level engine

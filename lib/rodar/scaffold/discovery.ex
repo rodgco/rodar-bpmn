@@ -15,6 +15,10 @@ defmodule Rodar.Scaffold.Discovery do
 
       config :rodar, :scaffold_namespace, "Workflow"
 
+  Discovery is recursive — tasks nested inside embedded subprocesses
+  (`:bpmn_activity_subprocess_embeded`) are discovered at any depth. Handler
+  injection via `apply_handlers/2` also recurses into subprocess elements.
+
   Discovery verifies each module:
     * Exists on the BEAM (`Code.ensure_loaded/1`)
     * Exports the correct callback — `execute/2` for service tasks
@@ -151,6 +155,11 @@ defmodule Rodar.Scaffold.Discovery do
           :error ->
             {id, {:bpmn_activity_task_service, attrs}}
         end
+
+      {id, {:bpmn_activity_subprocess_embeded, %{elements: nested} = attrs}}
+      when is_map(nested) ->
+        updated_nested = inject_into_elements(nested, handler_map)
+        {id, {:bpmn_activity_subprocess_embeded, %{attrs | elements: updated_nested}}}
 
       {id, elem} ->
         {id, elem}

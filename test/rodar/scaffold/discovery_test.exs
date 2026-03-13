@@ -29,6 +29,36 @@ defmodule Rodar.Scaffold.DiscoveryTest do
   </bpmn:definitions>
   """
 
+  @subprocess_xml """
+  <?xml version="1.0" encoding="UTF-8"?>
+  <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D1">
+    <bpmn:process id="P1" isExecutable="true">
+      <bpmn:startEvent id="Start_1">
+        <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:subProcess id="Sub_1">
+        <bpmn:startEvent id="Sub_Start">
+          <bpmn:outgoing>Sub_Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="Sub_Task" name="Validate Order">
+          <bpmn:incoming>Sub_Flow_1</bpmn:incoming>
+          <bpmn:outgoing>Sub_Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:endEvent id="Sub_End">
+          <bpmn:incoming>Sub_Flow_2</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="Sub_Flow_1" sourceRef="Sub_Start" targetRef="Sub_Task" />
+        <bpmn:sequenceFlow id="Sub_Flow_2" sourceRef="Sub_Task" targetRef="Sub_End" />
+      </bpmn:subProcess>
+      <bpmn:endEvent id="End_1">
+        <bpmn:incoming>Flow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Sub_1" />
+      <bpmn:sequenceFlow id="Flow_2" sourceRef="Sub_1" targetRef="End_1" />
+    </bpmn:process>
+  </bpmn:definitions>
+  """
+
   @mixed_tasks_xml """
   <?xml version="1.0" encoding="UTF-8"?>
   <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D1">
@@ -102,6 +132,18 @@ defmodule Rodar.Scaffold.DiscoveryTest do
 
       assert "Task_1" in result.not_found
     end
+
+    test "discovers service task handler inside subprocess" do
+      diagram = Diagram.load(@subprocess_xml)
+
+      result =
+        Discovery.discover(diagram,
+          module_prefix: "Rodar.Scaffold.DiscoveryTest.Handlers"
+        )
+
+      assert result.handler_map["Sub_Task"] ==
+               Rodar.Scaffold.DiscoveryTest.Handlers.ValidateOrder
+    end
   end
 
   describe "discover_from_file/3" do
@@ -135,6 +177,18 @@ defmodule Rodar.Scaffold.DiscoveryTest do
     test "returns diagram unchanged with empty handler_map" do
       diagram = Diagram.load(@service_tasks_xml)
       assert Discovery.apply_handlers(diagram, %{}) == diagram
+    end
+
+    test "injects handler into service task inside subprocess" do
+      diagram = Diagram.load(@subprocess_xml)
+      handler_map = %{"Sub_Task" => SomeSubModule}
+
+      updated = Discovery.apply_handlers(diagram, handler_map)
+      {:bpmn_process, _, elements} = hd(updated.processes)
+
+      {:bpmn_activity_subprocess_embeded, sub_attrs} = elements["Sub_1"]
+      {:bpmn_activity_task_service, task_attrs} = sub_attrs.elements["Sub_Task"]
+      assert task_attrs.handler == SomeSubModule
     end
   end
 

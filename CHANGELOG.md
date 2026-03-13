@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `Scaffold.extract_tasks/1` now recursively extracts tasks from embedded subprocesses (`:bpmn_activity_subprocess_embeded`) at any nesting depth
+- `Discovery.apply_handlers/2` now injects handlers into service tasks nested inside embedded subprocesses
+- Convention-based handler auto-discovery now finds handlers for tasks inside embedded subprocesses
+
 ## [1.4.0] - 2026-03-13
 
 ### Added

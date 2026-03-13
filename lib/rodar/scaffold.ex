@@ -7,6 +7,9 @@ defmodule Rodar.Scaffold do
   Service tasks get `Rodar.Activity.Task.Service.Handler` with `execute/2`,
   while all other task types get `Rodar.TaskHandler` with `token_in/2`.
 
+  Task extraction is recursive — tasks nested inside embedded subprocesses
+  (`:bpmn_activity_subprocess_embeded` elements) are discovered at any depth.
+
   This module also provides naming conventions used by both the scaffold Mix
   task and the convention-based auto-discovery system (`Rodar.Scaffold.Discovery`):
 
@@ -42,16 +45,29 @@ defmodule Rodar.Scaffold do
   Extracts all actionable tasks from a parsed BPMN diagram.
 
   Returns a list of maps with `:id`, `:name`, and `:bpmn_type` for each
-  task element found across all processes.
+  task element found across all processes. Recursively descends into
+  embedded subprocesses (`:bpmn_activity_subprocess_embeded`) at any
+  nesting depth.
   """
   @spec extract_tasks(map()) :: [map()]
   def extract_tasks(%{processes: processes}) do
     Enum.flat_map(processes, fn {:bpmn_process, _attrs, elements} ->
-      elements
-      |> Enum.filter(fn {_id, {type, _attrs}} -> type in @task_types end)
-      |> Enum.map(fn {id, {type, attrs}} ->
-        %{id: id, name: Map.get(attrs, :name), bpmn_type: type}
-      end)
+      extract_tasks_from_elements(elements)
+    end)
+  end
+
+  @doc false
+  @spec extract_tasks_from_elements(map()) :: [map()]
+  def extract_tasks_from_elements(elements) do
+    Enum.flat_map(elements, fn
+      {id, {type, attrs}} when type in @task_types ->
+        [%{id: id, name: Map.get(attrs, :name), bpmn_type: type}]
+
+      {_id, {:bpmn_activity_subprocess_embeded, %{elements: nested}}} when is_map(nested) ->
+        extract_tasks_from_elements(nested)
+
+      _ ->
+        []
     end)
   end
 

@@ -487,7 +487,7 @@ mix rodar.scaffold path/to/order.bpmn --force              # Overwrite existing 
 
 Generates one module per task with the correct behaviour (`Rodar.Activity.Task.Service.Handler` for service tasks, `Rodar.TaskHandler` for all others) and prints registration instructions.
 
-Scaffolded handlers are placed at deterministic paths (e.g., `MyApp.Workflow.Order.Handlers.ValidateOrder`), enabling convention-based auto-discovery when loading with `Diagram.load/2` using `:bpmn_file` and `:app_name` options — no manual wiring required. The namespace segment (`Workflow`) is configurable via `config :rodar, :scaffold_namespace`.
+Scaffolded handlers are placed at deterministic paths (e.g., `MyApp.Workflow.Order.Handlers.ValidateOrder`), enabling convention-based auto-discovery when loading with `Diagram.load/2` using `:bpmn_file` and `:app_name` options — no manual wiring required. Discovery is recursive: tasks inside embedded subprocesses are discovered at any nesting depth. The namespace segment (`Workflow`) is configurable via `config :rodar, :scaffold_namespace`.
 
 ## Development
 
