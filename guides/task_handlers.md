@@ -161,7 +161,7 @@ diagram.discovery
 # }
 ```
 
-Discovery checks each task for a module at the expected namespace and verifies it implements the correct callback (`execute/2` for service tasks, `token_in/2` for others).
+Discovery checks each task for a module at the expected namespace and verifies it implements the correct callback (`execute/2` for service tasks, `token_in/2` for others). Discovery is recursive — tasks nested inside embedded subprocesses are discovered at any depth using the same namespace convention as top-level tasks.
 
 You can mix explicit `handler_map` entries with discovery — explicit entries always win for overlapping task IDs:
 

@@ -41,6 +41,30 @@ defmodule Rodar.ScaffoldTest do
       # Timer event fixture may have tasks — filter to check structure
       assert is_list(tasks)
     end
+
+    test "extracts tasks from inside embedded subprocesses" do
+      diagram = diagram_with_subprocess()
+      tasks = Scaffold.extract_tasks(diagram)
+
+      assert length(tasks) == 2
+      assert Enum.find(tasks, &(&1.id == "Top_Task"))
+      assert Enum.find(tasks, &(&1.id == "Sub_Task"))
+
+      sub_task = Enum.find(tasks, &(&1.id == "Sub_Task"))
+      assert sub_task.name == "Check Stock"
+      assert sub_task.bpmn_type == :bpmn_activity_task_service
+    end
+
+    test "extracts tasks from deeply nested subprocesses" do
+      diagram = diagram_with_nested_subprocesses()
+      tasks = Scaffold.extract_tasks(diagram)
+
+      ids = Enum.map(tasks, & &1.id) |> MapSet.new()
+      assert "Top_Task" in ids
+      assert "Sub_Task" in ids
+      assert "Deep_Task" in ids
+      assert MapSet.size(ids) == 3
+    end
   end
 
   describe "module_name_from_element/1" do
@@ -193,5 +217,54 @@ defmodule Rodar.ScaffoldTest do
       end
 
     path |> File.read!() |> Diagram.load()
+  end
+
+  defp diagram_with_subprocess do
+    %{
+      processes: [
+        {:bpmn_process, %{id: "P1"},
+         %{
+           "Top_Task" => {:bpmn_activity_task_service, %{id: "Top_Task", name: "Validate"}},
+           "Sub_1" =>
+             {:bpmn_activity_subprocess_embeded,
+              %{
+                id: "Sub_1",
+                elements: %{
+                  "Sub_Task" =>
+                    {:bpmn_activity_task_service, %{id: "Sub_Task", name: "Check Stock"}}
+                }
+              }}
+         }}
+      ]
+    }
+  end
+
+  defp diagram_with_nested_subprocesses do
+    %{
+      processes: [
+        {:bpmn_process, %{id: "P1"},
+         %{
+           "Top_Task" => {:bpmn_activity_task_service, %{id: "Top_Task", name: "Validate"}},
+           "Sub_1" =>
+             {:bpmn_activity_subprocess_embeded,
+              %{
+                id: "Sub_1",
+                elements: %{
+                  "Sub_Task" =>
+                    {:bpmn_activity_task_service, %{id: "Sub_Task", name: "Check Stock"}},
+                  "Sub_2" =>
+                    {:bpmn_activity_subprocess_embeded,
+                     %{
+                       id: "Sub_2",
+                       elements: %{
+                         "Deep_Task" =>
+                           {:bpmn_activity_task_user, %{id: "Deep_Task", name: "Deep Review"}}
+                       }
+                     }}
+                }
+              }}
+         }}
+      ]
+    }
   end
 end

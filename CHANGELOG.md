@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Parse conformance now covers 17/21 MIWG reference files (A.1.0–C.9.2); 4 files skipped due to unqualified XML namespace conventions
 - B.2.0 parse tests now validate across all processes (official reference has 4 processes)
 - Download script (`scripts/download_miwg.sh`) rewritten to fetch from latest GitHub release
+- `Scaffold.extract_tasks/1` now recursively extracts tasks from embedded subprocesses (`:bpmn_activity_subprocess_embeded`) at any nesting depth
+- `Discovery.apply_handlers/2` now injects handlers into service tasks nested inside embedded subprocesses
+- Convention-based handler auto-discovery now finds handlers for tasks inside embedded subprocesses
 
 ### Added
 
