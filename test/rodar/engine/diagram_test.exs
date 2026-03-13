@@ -318,6 +318,51 @@ defmodule Rodar.Engine.DiagramTest do
 
       assert elems_plain == elems_opts
     end
+
+    @subprocess_service_xml """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D1">
+      <bpmn:process id="P1" isExecutable="true">
+        <bpmn:startEvent id="Start_1">
+          <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+        <bpmn:subProcess id="Sub_1">
+          <bpmn:incoming>Flow_1</bpmn:incoming>
+          <bpmn:outgoing>Flow_2</bpmn:outgoing>
+          <bpmn:startEvent id="Sub_Start">
+            <bpmn:outgoing>Sub_Flow</bpmn:outgoing>
+          </bpmn:startEvent>
+          <bpmn:serviceTask id="Sub_Task" name="Nested Service">
+            <bpmn:incoming>Sub_Flow</bpmn:incoming>
+            <bpmn:outgoing>Sub_Flow_2</bpmn:outgoing>
+          </bpmn:serviceTask>
+          <bpmn:endEvent id="Sub_End">
+            <bpmn:incoming>Sub_Flow_2</bpmn:incoming>
+          </bpmn:endEvent>
+          <bpmn:sequenceFlow id="Sub_Flow" sourceRef="Sub_Start" targetRef="Sub_Task" />
+          <bpmn:sequenceFlow id="Sub_Flow_2" sourceRef="Sub_Task" targetRef="Sub_End" />
+        </bpmn:subProcess>
+        <bpmn:endEvent id="End_1">
+          <bpmn:incoming>Flow_2</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Sub_1" />
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="Sub_1" targetRef="End_1" />
+      </bpmn:process>
+    </bpmn:definitions>
+    """
+
+    test "injects handler into service task inside embedded subprocess" do
+      handler_map = %{
+        "Sub_Task" => Rodar.Activity.Task.Service.TestHandler
+      }
+
+      diagram = Diagram.load(@subprocess_service_xml, handler_map: handler_map)
+      {:bpmn_process, _, elements} = hd(diagram.processes)
+
+      {:bpmn_activity_subprocess_embeded, sub_attrs} = elements["Sub_1"]
+      {:bpmn_activity_task_service, task_attrs} = sub_attrs.elements["Sub_Task"]
+      assert task_attrs.handler == Rodar.Activity.Task.Service.TestHandler
+    end
   end
 
   describe "parser support for lanes" do

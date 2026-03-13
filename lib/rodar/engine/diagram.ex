@@ -165,6 +165,11 @@ defmodule Rodar.Engine.Diagram do
       {id, {:bpmn_activity_task_service, attrs}} ->
         {id, maybe_inject_handler({:bpmn_activity_task_service, attrs}, id, handler_map)}
 
+      {id, {:bpmn_activity_subprocess_embeded, %{elements: nested} = attrs}}
+      when is_map(nested) ->
+        updated = inject_handlers_into_elements(nested, handler_map)
+        {id, {:bpmn_activity_subprocess_embeded, %{attrs | elements: updated}}}
+
       {id, elem} ->
         {id, elem}
     end)
