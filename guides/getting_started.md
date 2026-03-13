@@ -108,6 +108,7 @@ mix rodar.validate my_process.bpmn
 
 ## Next Steps
 
+- [Workflow API](workflow.md) — High-level API for loading, running, and managing BPMN workflows
 - [Process Lifecycle](process_lifecycle.md) — Instance creation, status transitions, suspend/resume
 - [Events](events.md) — Start, end, intermediate, boundary events and the event bus
 - [Gateways](gateways.md) — Exclusive, parallel, inclusive, complex, and event-based gateways

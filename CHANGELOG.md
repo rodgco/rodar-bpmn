@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<<<<<<< HEAD
 ### Fixed
 
 - `Rodar.dispatch/2` catch-all clauses now return `{:not_implemented}` instead of `nil` for unknown element types
@@ -28,36 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Parse tests for 12 new MIWG reference files: A.2.1, A.4.0, C.2.0, C.4.0, C.5.0, C.6.0, C.7.0, C.8.0, C.8.1, C.9.0, C.9.1, C.9.2
 - `TestHelper.all_process_elements/1` for merging elements across all processes in a diagram
-
-## [1.4.0] - 2026-03-13
-
-### Added
-
-- `mix rodar.scaffold` mix task — generates handler module stubs from a BPMN file with correct behaviours and callbacks
-- `Rodar.Scaffold` module — core scaffolding logic for task extraction and handler code generation
-- `Rodar.Scaffold.Discovery` module — convention-based handler auto-discovery at `<AppName>.Workflow.<BpmnFilename>.Handlers.<TaskName>` paths (namespace configurable via `config :rodar, :scaffold_namespace`)
-- `Scaffold.bpmn_base_name/1` and `Scaffold.default_module_prefix/2` — shared naming helpers for scaffold and discovery
-- `Diagram.load/2` now accepts `:bpmn_file`, `:app_name`, and `:discover_handlers` options for automatic handler discovery at parse time
-- `mix rodar.run` automatically discovers scaffolded handlers and prints discovered vs passthrough status
-
-### Changed
-
-- **Project renamed from `rodar_bpmn` to `rodar`** — package is now `:rodar`, modules use `Rodar.*`, config uses `config :rodar`, mix tasks are `mix rodar.*`, telemetry events use `[:rodar, ...]`. BPMN notation atoms (`:bpmn_*`) unchanged.
-- `mix rodar.run` hook output now prints each node's own result instead of propagated downstream results — nodes that forwarded the token show `[OK]` even when a later node fails
-- Handler convention path changed from `Bpmn.Handlers.<File>` to `Workflow.<File>.Handlers` (folder: `workflow/<file>/handlers/`), with namespace configurable via `config :rodar, :scaffold_namespace`
-
-### Fixed
-
-- Script task language resolution now checks `:scriptFormat` attribute (standard BPMN 2.0) in addition to `:type`, defaulting to `"elixir"` when neither is present — script tasks no longer return `{:not_implemented}` when only `scriptFormat` is set
-
-## [1.3.0] - 2026-03-12
-
-### Added
-
-- BPMN lane support — parser extracts `laneSet`/`lane`/`childLaneSet`/`flowNodeRef` into process attrs (`:lane_set` key)
-- `Rodar.Lane` module — stateless query API: `find_lane_for_node/2`, `node_lane_map/1`, `all_lanes/1`
-- Lane XML export with full round-trip fidelity (including nested child lane sets)
-- `Rodar.Validation.validate_lanes/2` — lane referential integrity checks (`:lane_flow_node_ref`, `:lane_duplicate_ref`)
+- Workflow API guide (`guides/workflow.md`) covering both `Rodar.Workflow` (Layer 1) and `Rodar.Workflow.Server` (Layer 2) with function reference, smart completion detection, status mapping, and pending-task querying patterns
 
 ## [1.2.0] - 2026-03-11
 

@@ -80,6 +80,44 @@ case result do
 end
 ```
 
+### Workflow API
+
+For most applications, the Workflow API eliminates boilerplate. Layer 1 (`RodarBpmn.Workflow`) provides a functional API; Layer 2 (`RodarBpmn.Workflow.Server`) adds a GenServer with instance tracking.
+
+```elixir
+# Layer 1 — functional API via `use` macro
+defmodule MyApp.OrderWorkflow do
+  use RodarBpmn.Workflow,
+    bpmn_file: "priv/bpmn/order_processing.bpmn",
+    process_id: "order_processing",
+    otp_app: :my_app
+end
+
+MyApp.OrderWorkflow.setup()
+{:ok, pid} = MyApp.OrderWorkflow.start_process(%{"customer" => "alice"})
+MyApp.OrderWorkflow.process_status(pid)
+```
+
+```elixir
+# Layer 2 — GenServer with instance tracking
+defmodule MyApp.OrderManager do
+  use RodarBpmn.Workflow.Server,
+    bpmn_file: "priv/bpmn/order_processing.bpmn",
+    process_id: "order_processing",
+    otp_app: :my_app
+
+  @impl RodarBpmn.Workflow.Server
+  def init_data(params, instance_id) do
+    %{"customer" => params["customer"], "order_id" => instance_id}
+  end
+
+  def create_order(params), do: create_instance(params)
+  def approve(id), do: complete_task(id, "Task_Approval", %{"approved" => true})
+end
+```
+
+See the [Workflow guide](guides/workflow.md) for the full API reference, smart completion detection, status mapping, and pending-task querying patterns.
+
 ### Resuming Paused Tasks
 
 User tasks, manual tasks, and receive tasks all pause execution and return `{:manual, task_data}`. Resume them with input data:
