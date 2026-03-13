@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="order-routing" name="Order Routing" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_Classify" name="Classify Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_Route" name="Order Type?" default="Flow_Standard">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Express</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Standard</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Express" name="Express Processing">
+      <bpmn:incoming>Flow_Express</bpmn:incoming>
+      <bpmn:outgoing>Flow_Express_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Standard" name="Standard Processing">
+      <bpmn:incoming>Flow_Standard</bpmn:incoming>
+      <bpmn:outgoing>Flow_Standard_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_Merge" name="Merge">
+      <bpmn:incoming>Flow_Express_End</bpmn:incoming>
+      <bpmn:incoming>Flow_Standard_End</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_1" name="Order Processed">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_Classify" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Classify" targetRef="GW_Route" />
+    <bpmn:sequenceFlow id="Flow_Express" sourceRef="GW_Route" targetRef="Task_Express">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="elixir">data["order_type"] == "express"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Standard" sourceRef="GW_Route" targetRef="Task_Standard" />
+    <bpmn:sequenceFlow id="Flow_Express_End" sourceRef="Task_Express" targetRef="GW_Merge" />
+    <bpmn:sequenceFlow id="Flow_Standard_End" sourceRef="Task_Standard" targetRef="GW_Merge" />
+    <bpmn:sequenceFlow id="Flow_End" sourceRef="GW_Merge" targetRef="End_1" />
+  </bpmn:process>
+</bpmn:definitions>

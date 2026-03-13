@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="approval-with-decision" name="Approval With Decision" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Request Submitted">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_Prepare" name="Prepare Request">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_Approve" name="Manager Approval">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Decision" name="Approved?" default="Flow_Rejected">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Fulfill" name="Fulfill Request">
+      <bpmn:incoming>Flow_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approved_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Notify" name="Notify Rejection">
+      <bpmn:incoming>Flow_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_Rejected_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Approved" name="Fulfilled">
+      <bpmn:incoming>Flow_Approved_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Rejected" name="Rejected">
+      <bpmn:incoming>Flow_Rejected_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_Prepare" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Prepare" targetRef="Task_Approve" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Approve" targetRef="GW_Decision" />
+    <bpmn:sequenceFlow id="Flow_Approved" sourceRef="GW_Decision" targetRef="Task_Fulfill">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="elixir">data["approved"] == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Rejected" sourceRef="GW_Decision" targetRef="Task_Notify" />
+    <bpmn:sequenceFlow id="Flow_Approved_End" sourceRef="Task_Fulfill" targetRef="End_Approved" />
+    <bpmn:sequenceFlow id="Flow_Rejected_End" sourceRef="Task_Notify" targetRef="End_Rejected" />
+  </bpmn:process>
+</bpmn:definitions>

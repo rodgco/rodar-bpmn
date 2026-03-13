@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="discount-rules" name="Discount Rules" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Calculate Discount">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="GW_Discount" name="Discount Tier?" default="Flow_None">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gold</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Silver</bpmn:outgoing>
+      <bpmn:outgoing>Flow_None</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_Gold" name="Apply Gold Discount" scriptFormat="feel">
+      <bpmn:incoming>Flow_Gold</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gold_End</bpmn:outgoing>
+      <bpmn:script>{ discount: total * 0.20, tier: "gold" }</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Task_Silver" name="Apply Silver Discount" scriptFormat="feel">
+      <bpmn:incoming>Flow_Silver</bpmn:incoming>
+      <bpmn:outgoing>Flow_Silver_End</bpmn:outgoing>
+      <bpmn:script>{ discount: total * 0.10, tier: "silver" }</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Task_None" name="No Discount" scriptFormat="feel">
+      <bpmn:incoming>Flow_None</bpmn:incoming>
+      <bpmn:outgoing>Flow_None_End</bpmn:outgoing>
+      <bpmn:script>{ discount: 0, tier: "none" }</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="GW_Merge" name="Merge">
+      <bpmn:incoming>Flow_Gold_End</bpmn:incoming>
+      <bpmn:incoming>Flow_Silver_End</bpmn:incoming>
+      <bpmn:incoming>Flow_None_End</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_1" name="Discount Applied">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="GW_Discount" />
+    <bpmn:sequenceFlow id="Flow_Gold" sourceRef="GW_Discount" targetRef="Task_Gold">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="feel">total >= 500</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Silver" sourceRef="GW_Discount" targetRef="Task_Silver">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="feel">total >= 100 and total &lt; 500</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_None" sourceRef="GW_Discount" targetRef="Task_None" />
+    <bpmn:sequenceFlow id="Flow_Gold_End" sourceRef="Task_Gold" targetRef="GW_Merge" />
+    <bpmn:sequenceFlow id="Flow_Silver_End" sourceRef="Task_Silver" targetRef="GW_Merge" />
+    <bpmn:sequenceFlow id="Flow_None_End" sourceRef="Task_None" targetRef="GW_Merge" />
+    <bpmn:sequenceFlow id="Flow_End" sourceRef="GW_Merge" targetRef="End_1" />
+  </bpmn:process>
+</bpmn:definitions>
