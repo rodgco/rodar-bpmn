@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-03-13
+
 ### Fixed
 
 - Parallel, inclusive, and complex gateway joins now fire correctly — `SequenceFlow.token_out` threads its flow ID through context meta so `dispatch/2` can pass it to `token_in/3`, enabling `record_token` instead of read-only `token_count`
