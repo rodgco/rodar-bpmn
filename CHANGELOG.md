@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Workflow API guide (`guides/workflow.md`) covering both `RodarBpmn.Workflow` (Layer 1) and `RodarBpmn.Workflow.Server` (Layer 2) with function reference, smart completion detection, status mapping, and pending-task querying patterns
+
 ## [1.2.0] - 2026-03-11
 
 ### Added

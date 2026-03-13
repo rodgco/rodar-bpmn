@@ -79,7 +79,8 @@ defmodule RodarBpmn.MixProject do
         "guides/persistence.md",
         "guides/versioning.md",
         "guides/observability.md",
-        "guides/cli.md"
+        "guides/cli.md",
+        "guides/workflow.md"
       ],
       groups_for_extras: [
         Guides: ~r/guides\/.*/
