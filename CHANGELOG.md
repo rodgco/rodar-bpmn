@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded MIWG conformance test suite to the 2025 release (21 reference files, up from 5)
+- Parse conformance now covers 17/21 MIWG reference files (A.1.0–C.9.2); 4 files skipped due to unqualified XML namespace conventions
+- B.2.0 parse tests now validate across all processes (official reference has 4 processes)
+- Download script (`scripts/download_miwg.sh`) rewritten to fetch from latest GitHub release
+
+### Added
+
+- Parse tests for 12 new MIWG reference files: A.2.1, A.4.0, C.2.0, C.4.0, C.5.0, C.6.0, C.7.0, C.8.0, C.8.1, C.9.0, C.9.1, C.9.2
+- `TestHelper.all_process_elements/1` for merging elements across all processes in a diagram
+
 ## [1.4.0] - 2026-03-13
 
 ### Added

@@ -17,6 +17,13 @@ defmodule Rodar.Conformance.TestHelper do
     elements
   end
 
+  @doc "Extract and merge elements from all processes in a diagram."
+  def all_process_elements(diagram) do
+    Enum.reduce(diagram.processes, %{}, fn {:bpmn_process, _attrs, elements}, acc ->
+      Map.merge(acc, elements)
+    end)
+  end
+
   @doc "Execute a diagram from its start event with optional init data."
   def execute_from_start(elements, init_data \\ %{}) do
     {:ok, context} = Context.start_link(elements, init_data)

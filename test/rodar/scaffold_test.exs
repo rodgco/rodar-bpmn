@@ -15,7 +15,7 @@ defmodule Rodar.ScaffoldTest do
       assert Enum.find(tasks, &(&1.id == "Task_B"))
     end
 
-    test "extracts service, user, send, and receive tasks" do
+    test "extracts service, user, and generic tasks" do
       diagram = load_fixture("conformance/miwg/B.1.0.bpmn")
       tasks = Scaffold.extract_tasks(diagram)
 
@@ -23,8 +23,6 @@ defmodule Rodar.ScaffoldTest do
 
       assert :bpmn_activity_task_service in types
       assert :bpmn_activity_task_user in types
-      assert :bpmn_activity_task_send in types
-      assert :bpmn_activity_task_receive in types
       assert :bpmn_activity_task in types
     end
 
@@ -33,7 +31,7 @@ defmodule Rodar.ScaffoldTest do
       tasks = Scaffold.extract_tasks(diagram)
 
       service = Enum.find(tasks, &(&1.bpmn_type == :bpmn_activity_task_service))
-      assert service.name == "Service Task"
+      assert service.name =~ "Service Task"
     end
 
     test "returns empty list when no tasks" do

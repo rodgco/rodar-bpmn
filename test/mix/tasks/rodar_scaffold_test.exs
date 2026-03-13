@@ -66,10 +66,14 @@ defmodule Mix.Tasks.Rodar.ScaffoldTest do
         Scaffold.run([@miwg_b10, "--output-dir", tmp_dir])
       end)
 
-      service_file = Path.join(tmp_dir, "service_task.ex")
-      assert File.exists?(service_file)
+      files = File.ls!(tmp_dir)
 
-      content = File.read!(service_file)
+      service_file =
+        Enum.find(files, fn f -> String.starts_with?(f, "service_task") end)
+
+      assert service_file != nil, "Expected a service_task*.ex file, got: #{inspect(files)}"
+
+      content = File.read!(Path.join(tmp_dir, service_file))
       assert content =~ "@behaviour Rodar.Activity.Task.Service.Handler"
       assert content =~ "def execute(_attrs, _data)"
     end

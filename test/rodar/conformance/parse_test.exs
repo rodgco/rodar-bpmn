@@ -180,39 +180,299 @@ defmodule Rodar.Conformance.ParseTest do
       assert length(diagram.processes) >= 2
     end
 
+    test "has collaboration element", %{diagram: diagram} do
+      assert diagram.collaboration != nil
+    end
+
     test "contains parallel gateways", %{diagram: diagram} do
-      elements = TestHelper.first_process_elements(diagram)
+      elements = TestHelper.all_process_elements(diagram)
       assert TestHelper.count_elements_by_type(elements, :bpmn_gateway_parallel) >= 2
     end
 
     test "contains inclusive gateways", %{diagram: diagram} do
-      elements = TestHelper.first_process_elements(diagram)
+      elements = TestHelper.all_process_elements(diagram)
       assert TestHelper.count_elements_by_type(elements, :bpmn_gateway_inclusive) >= 2
     end
 
     test "contains boundary events", %{diagram: diagram} do
-      elements = TestHelper.first_process_elements(diagram)
+      elements = TestHelper.all_process_elements(diagram)
       assert TestHelper.count_elements_by_type(elements, :bpmn_event_boundary) >= 1
     end
 
     test "contains intermediate catch event", %{diagram: diagram} do
-      elements = TestHelper.first_process_elements(diagram)
+      elements = TestHelper.all_process_elements(diagram)
       assert TestHelper.count_elements_by_type(elements, :bpmn_event_intermediate_catch) >= 1
     end
 
     test "contains intermediate throw event", %{diagram: diagram} do
-      elements = TestHelper.first_process_elements(diagram)
+      elements = TestHelper.all_process_elements(diagram)
       assert TestHelper.count_elements_by_type(elements, :bpmn_event_intermediate_throw) >= 1
     end
 
     test "contains embedded subprocess", %{diagram: diagram} do
-      elements = TestHelper.first_process_elements(diagram)
+      elements = TestHelper.all_process_elements(diagram)
       assert TestHelper.count_elements_by_type(elements, :bpmn_activity_subprocess_embeded) >= 1
     end
 
     test "contains send task", %{diagram: diagram} do
-      elements = TestHelper.first_process_elements(diagram)
+      elements = TestHelper.all_process_elements(diagram)
       assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task_send) >= 1
+    end
+  end
+
+  describe "MIWG A.2.1 — Exclusive Gateway with Conditions" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "A.2.1.bpmn")}
+    end
+
+    test "parses successfully with 1 process", %{diagram: diagram} do
+      assert length(diagram.processes) == 1
+    end
+
+    test "contains 2 exclusive gateways", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_gateway_exclusive) == 2
+    end
+
+    test "contains 4 tasks", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task) == 4
+    end
+  end
+
+  describe "MIWG A.4.0 — Subprocess with Collaboration" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "A.4.0.bpmn")}
+    end
+
+    test "parses successfully with 2 processes", %{diagram: diagram} do
+      assert length(diagram.processes) == 2
+    end
+
+    test "has collaboration element", %{diagram: diagram} do
+      assert diagram.collaboration != nil
+    end
+
+    test "contains embedded subprocesses", %{diagram: diagram} do
+      elements = TestHelper.all_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_subprocess_embeded) >= 2
+    end
+  end
+
+  describe "MIWG C.2.0 — Collaboration with Multiple Pools" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.2.0.bpmn")}
+    end
+
+    test "parses successfully with multiple processes", %{diagram: diagram} do
+      assert length(diagram.processes) >= 2
+    end
+
+    test "has collaboration element", %{diagram: diagram} do
+      assert diagram.collaboration != nil
+    end
+
+    test "contains exclusive gateways", %{diagram: diagram} do
+      elements = TestHelper.all_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_gateway_exclusive) >= 1
+    end
+  end
+
+  describe "MIWG C.4.0 — Complex Process with Parallel Gateways" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.4.0.bpmn")}
+    end
+
+    test "parses successfully with multiple processes", %{diagram: diagram} do
+      assert length(diagram.processes) >= 2
+    end
+
+    test "has collaboration element", %{diagram: diagram} do
+      assert diagram.collaboration != nil
+    end
+
+    test "contains parallel gateways", %{diagram: diagram} do
+      elements = TestHelper.all_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_gateway_parallel) >= 4
+    end
+
+    test "contains user tasks", %{diagram: diagram} do
+      elements = TestHelper.all_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task_user) >= 10
+    end
+  end
+
+  describe "MIWG C.5.0 — Complex Process with Exclusive Gateways" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.5.0.bpmn")}
+    end
+
+    test "parses successfully with multiple processes", %{diagram: diagram} do
+      assert length(diagram.processes) >= 2
+    end
+
+    test "contains exclusive gateways", %{diagram: diagram} do
+      elements = TestHelper.all_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_gateway_exclusive) >= 10
+    end
+  end
+
+  describe "MIWG C.6.0 — Intermediate Events and Boundary Events" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.6.0.bpmn")}
+    end
+
+    test "parses successfully with 1 process", %{diagram: diagram} do
+      assert length(diagram.processes) == 1
+    end
+
+    test "contains intermediate catch events", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_event_intermediate_catch) >= 3
+    end
+
+    test "contains boundary events", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_event_boundary) >= 3
+    end
+
+    test "contains send tasks", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task_send) >= 6
+    end
+  end
+
+  describe "MIWG C.7.0 — Parallel Gateway with Collaboration" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.7.0.bpmn")}
+    end
+
+    test "parses successfully with 1 process", %{diagram: diagram} do
+      assert length(diagram.processes) == 1
+    end
+
+    test "has collaboration element", %{diagram: diagram} do
+      assert diagram.collaboration != nil
+    end
+
+    test "contains parallel gateways", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_gateway_parallel) == 2
+    end
+  end
+
+  describe "MIWG C.8.0 — Service Tasks with Exclusive Gateways" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.8.0.bpmn")}
+    end
+
+    test "parses successfully with 1 process", %{diagram: diagram} do
+      assert length(diagram.processes) == 1
+    end
+
+    test "contains service tasks", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task_service) >= 3
+    end
+
+    test "contains send tasks", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task_send) >= 4
+    end
+  end
+
+  describe "MIWG C.8.1 — Service Tasks with Collaboration" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.8.1.bpmn")}
+    end
+
+    test "parses successfully with 1 process", %{diagram: diagram} do
+      assert length(diagram.processes) == 1
+    end
+
+    test "has collaboration element", %{diagram: diagram} do
+      assert diagram.collaboration != nil
+    end
+  end
+
+  describe "MIWG C.9.0 — Subprocess with Service Tasks" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.9.0.bpmn")}
+    end
+
+    test "parses successfully with 1 process", %{diagram: diagram} do
+      assert length(diagram.processes) == 1
+    end
+
+    test "contains embedded subprocesses", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_subprocess_embeded) >= 2
+    end
+
+    test "contains service tasks", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task_service) >= 5
+    end
+  end
+
+  describe "MIWG C.9.1 — Send and Receive Tasks" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.9.1.bpmn")}
+    end
+
+    test "parses successfully with 1 process", %{diagram: diagram} do
+      assert length(diagram.processes) == 1
+    end
+
+    test "contains send tasks", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task_send) >= 2
+    end
+
+    test "contains receive task", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_task_receive) >= 1
+    end
+  end
+
+  describe "MIWG C.9.2 — Subprocess with Boundary Events" do
+    setup do
+      {:ok, diagram: TestHelper.load_fixture(:miwg, "C.9.2.bpmn")}
+    end
+
+    test "parses successfully with 1 process", %{diagram: diagram} do
+      assert length(diagram.processes) == 1
+    end
+
+    test "contains embedded subprocesses", %{diagram: diagram} do
+      elements = TestHelper.first_process_elements(diagram)
+      assert TestHelper.count_elements_by_type(elements, :bpmn_activity_subprocess_embeded) >= 3
+    end
+  end
+
+  describe "MIWG files that require extended namespace support" do
+    @tag :skip
+    test "A.4.1 — choreography/extended namespace" do
+      diagram = TestHelper.load_fixture(:miwg, "A.4.1.bpmn")
+      assert length(diagram.processes) >= 1
+    end
+
+    @tag :skip
+    test "C.1.0 — extended namespace" do
+      diagram = TestHelper.load_fixture(:miwg, "C.1.0.bpmn")
+      assert length(diagram.processes) >= 1
+    end
+
+    @tag :skip
+    test "C.1.1 — extended namespace" do
+      diagram = TestHelper.load_fixture(:miwg, "C.1.1.bpmn")
+      assert length(diagram.processes) >= 1
+    end
+
+    @tag :skip
+    test "C.3.0 — extended namespace" do
+      diagram = TestHelper.load_fixture(:miwg, "C.3.0.bpmn")
+      assert length(diagram.processes) >= 1
     end
   end
 end

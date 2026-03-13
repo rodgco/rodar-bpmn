@@ -506,20 +506,22 @@ mix rodar.scaffold <file>   # Generate handler modules
 
 ### BPMN Conformance Tests
 
-The engine is validated against the [BPMN MIWG](https://www.omg.org/cgi-bin/doc?bmi/) reference test suite, ensuring interoperability with diagrams from Camunda, Signavio, Bizagi, and other BPMN tools.
+The engine is validated against the [BPMN MIWG](https://www.omg.org/cgi-bin/doc?bmi/) reference test suite (2025 release), ensuring interoperability with diagrams from Camunda, Signavio, Bizagi, and other BPMN tools. **17 out of 21 MIWG reference files parse successfully** (94.1% element type coverage on B.2.0).
 
 ```shell
 mix test test/rodar/conformance/                    # Run all conformance tests
 mix test test/rodar/conformance/parse_test.exs      # MIWG parse verification
 mix test test/rodar/conformance/execution_test.exs  # 12 execution patterns
 mix test test/rodar/conformance/coverage_test.exs   # Element type coverage
+./scripts/download_miwg.sh                          # Re-download latest MIWG files
 ```
 
 Tests cover:
 
-- **Parse conformance** — MIWG reference files (A.1.0–B.2.0) parse correctly regardless of namespace prefix
+- **Parse conformance** — 17/21 MIWG reference files (A.1.0, A.2.0, A.2.1, A.3.0, A.4.0, B.1.0, B.2.0, C.2.0, C.4.0–C.9.2) parse correctly regardless of namespace prefix
 - **Execution patterns** — 12 standard BPMN patterns (sequential, gateways, timers, messages, signals, error boundaries, compensation, subprocesses, event-based routing)
 - **Element coverage** — Reports supported element types against the most complex MIWG reference (B.2.0)
+- **Known gaps** — 4 files (A.4.1, C.1.0, C.1.1, C.3.0) use unqualified XML namespace conventions that the `erlsom`-based parser does not yet resolve
 
 ## Versioning & Releases
 

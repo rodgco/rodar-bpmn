@@ -85,12 +85,42 @@ defmodule Rodar.Conformance.CoverageTest do
     end
 
     test "all MIWG fixtures parse without errors" do
-      fixtures = ["A.1.0.bpmn", "A.2.0.bpmn", "A.3.0.bpmn", "B.1.0.bpmn", "B.2.0.bpmn"]
+      # Fixtures that our parser fully supports
+      fixtures = [
+        "A.1.0.bpmn",
+        "A.2.0.bpmn",
+        "A.2.1.bpmn",
+        "A.3.0.bpmn",
+        "A.4.0.bpmn",
+        "B.1.0.bpmn",
+        "B.2.0.bpmn",
+        "C.2.0.bpmn",
+        "C.4.0.bpmn",
+        "C.5.0.bpmn",
+        "C.6.0.bpmn",
+        "C.7.0.bpmn",
+        "C.8.0.bpmn",
+        "C.8.1.bpmn",
+        "C.9.0.bpmn",
+        "C.9.1.bpmn",
+        "C.9.2.bpmn"
+      ]
 
       for fixture <- fixtures do
         diagram = TestHelper.load_fixture(:miwg, fixture)
         assert is_map(diagram), "Failed to parse #{fixture}"
         assert diagram.processes != [], "No processes in #{fixture}"
+      end
+    end
+
+    test "MIWG fixtures requiring extended namespace support parse without crash" do
+      # These files use namespace conventions our parser doesn't fully handle yet,
+      # resulting in 0 processes. We verify they don't crash.
+      fixtures = ["A.4.1.bpmn", "C.1.0.bpmn", "C.1.1.bpmn", "C.3.0.bpmn"]
+
+      for fixture <- fixtures do
+        diagram = TestHelper.load_fixture(:miwg, fixture)
+        assert is_map(diagram), "Failed to parse #{fixture}"
       end
     end
   end
